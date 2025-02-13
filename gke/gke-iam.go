@@ -1,7 +1,11 @@
-package main
+package gke
 
 import (
 	"fmt"
+
+	"crypto/sha1"
+	"encoding/hex"
+	"strings"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/serviceaccount"
@@ -43,24 +47,15 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	if err != nil {
 		return nil, err
 	}
-	customRoleId := std.SubstrOutput(ctx, std.SubstrOutputArgs{
-		Input: std.Sha1Output(ctx, std.Sha1OutputArgs{
-			Input: args.GkeClusterName,
-		}, nil).ApplyT(func(invoke std.Sha1Result) (*string, error) {
-			return invoke.Result, nil
-		}).(pulumi.StringPtrOutput),
-		Length: pulumi.Int(0),
-		Offset: pulumi.Int(8),
-	}, nil).ApplyT(func(invoke std.SubstrResult) (string, error) {
-		return fmt.Sprintf("castai.gkeAccess.%v.tf", invoke.Result), nil
-	}).(pulumi.StringOutput)
-	conditionExpression := std.JoinOutput(ctx, std.JoinOutputArgs{
-		Separator: pulumi.String("||"),
-		Input: []pulumi.String(
-			("formatlist(\"resource.name.startsWith(\\\"projects/-/serviceAccounts/%s\\\")\",var.service_accounts_unique_ids)")),
-	}, nil).ApplyT(func(invoke std.JoinResult) (*string, error) {
-		return invoke.Result, nil
-	}).(pulumi.StringPtrOutput)
+
+	hash := sha1.New()
+	hash.Write([]byte(pulumi.StringInput(args.GkeClusterName())))
+	hashString := hex.EncodeToString(hash.Sum(nil))
+
+	customRoleId := pulumi.String(fmt.Sprintf("castai.gkeAccess.%v.tf", hashString[:8]))
+
+	conditionExpression := pulumi.String(strings.Join([]string{"compact([\"resource.type==\\\"gke.io/cluster\\\"\","}, "||"))
+
 	defaultPermissions := []interface{}{
 		"roles/iam.serviceAccountUser",
 		fmt.Sprintf("projects/%v/roles/%v", args.ProjectId, customRoleId),

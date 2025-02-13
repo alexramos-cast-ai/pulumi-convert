@@ -5,3 +5,4 @@ config:
     value: 'TODO: var.castai_api_token'
   castai:apiUrl:
     value: 'TODO: var.castai_api_url'
+

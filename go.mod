@@ -1,4 +1,4 @@
-module gke_cluster_existing
+module github.com/castai/pulumi-convert
 
 go 1.22
 

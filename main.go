@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/castai/pulumi-convert/castai"
+	"github.com/castai/pulumi-convert/gke"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/container"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/organizations"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -9,7 +11,7 @@ import (
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
-		gkeArgs := GkeIamArgs{
+		gkeArgs := gke.GkeIamArgs{
 			ProjectId:                         pulumi.String("my-project"),
 			GkeClusterName:                    pulumi.String("my-cluster"),
 			ServiceAccountsUniqueIds:          pulumi.StringArray{},
@@ -26,7 +28,7 @@ func main() {
 		subnets := pulumi.StringArray{}
 		tags := pulumi.StringMap{}
 
-		gkeClusterArgs := GkeClusterArgs{
+		gkeClusterArgs := castai.GkeClusterArgs{
 			ApiUrl:                    pulumi.String("https://api.cast.ai"),
 			CastaiApiToken:            pulumi.String("my-token"),
 			GrpcUrl:                   pulumi.String("grpc.cast.ai:443"),
@@ -86,7 +88,7 @@ func main() {
 			Project:  gkeArgs.ProjectId,
 		}, nil)
 
-		_, err = NewGkeIam(ctx, "castai-gke-iam", &GkeIamArgs{
+		_, err = gke.NewGkeIam(ctx, "castai-gke-iam", &gke.GkeIamArgs{
 			ProjectId:      gkeArgs.ProjectId,
 			GkeClusterName: gkeArgs.GkeClusterName,
 		})
@@ -94,7 +96,7 @@ func main() {
 			return err
 		}
 
-		_, err = NewGkeCluster(ctx, "castai-gke-cluster", &GkeClusterArgs{
+		_, err = castai.NewGkeCluster(ctx, "castai-gke-cluster", &castai.GkeClusterArgs{
 			ApiUrl:                    gkeClusterArgs.ApiUrl,
 			CastaiApiToken:            gkeClusterArgs.CastaiApiToken,
 			GrpcUrl:                   gkeClusterArgs.GrpcUrl,
