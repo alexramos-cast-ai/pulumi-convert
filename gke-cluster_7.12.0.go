@@ -4,18 +4,19 @@ import (
 	"fmt"
 
 	// "github.com/pulumi/pulumi-castai/sdk/go/castai"
+	// "github.com/pulumi/pulumi-helm/sdk/go/helm"
 	"github.com/pulumi/pulumi-command/sdk/go/command/local"
-	"github.com/pulumi/pulumi-helm/sdk/go/helm"
+	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
 	"github.com/pulumi/pulumi-null/sdk/go/null"
 	"github.com/pulumi/pulumi-terraform-provider/sdks/go/castai/v7/castai"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func notImplemented(message string) pulumi.AnyOutput {
-	panic(message)
-}
+// func notImplemented(message string) pulumi.AnyOutput {
+// 	panic(message)
+// }
 
-type GkeCluster7120Args struct {
+type GkeClusterArgs struct {
 	ApiUrl                       pulumi.StringInput
 	CastaiApiToken               pulumi.StringInput
 	GrpcUrl                      pulumi.StringInput
@@ -60,20 +61,20 @@ type GkeCluster7120Args struct {
 	CloudProxyGrpcUrlOverride    pulumi.StringInput
 }
 
-type GkeCluster7120 struct {
+type GkeCluster struct {
 	pulumi.ResourceState
 	ClusterId                pulumi.AnyOutput
 	CastaiNodeConfigurations pulumi.AnyOutput
 	CastaiNodeTemplates      pulumi.AnyOutput
 }
 
-func NewGkeCluster7120(
+func NewGkeCluster(
 	ctx *pulumi.Context,
 	name string,
-	args *GkeCluster7120Args,
+	args *GkeClusterArgs,
 	opts ...pulumi.ResourceOption,
-) (*GkeCluster7120, error) {
-	var componentResource GkeCluster7120
+) (*GkeCluster, error) {
+	var componentResource GkeCluster
 	err := ctx.RegisterComponentResource("components:index:GkeCluster7120", name, &componentResource, opts...)
 	if err != nil {
 		return nil, err

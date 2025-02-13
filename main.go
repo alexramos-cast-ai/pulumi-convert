@@ -4,72 +4,107 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/container"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/organizations"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
-		cfg := config.New(ctx, "")
-		// GKE cluster name in GCP project.
-		clusterName := cfg.Require("clusterName")
-		// The region to create the cluster.
-		clusterRegion := cfg.Require("clusterRegion")
-		// The zones to create the cluster.
-		clusterZones := cfg.Require("clusterZones")
-		// GCP project ID in which GKE cluster would be created.
-		projectId := cfg.Require("projectId")
-		// URL of alternative CAST AI API to be used during development or testing
-		castaiApiUrl := "https://api.cast.ai"
-		if param := cfg.Get("castaiApiUrl"); param != "" {
-			castaiApiUrl = param
+
+		gkeArgs := GkeIamArgs{
+			ProjectId:                         pulumi.String("my-project"),
+			GkeClusterName:                    pulumi.String("my-cluster"),
+			ServiceAccountsUniqueIds:          pulumi.StringArray{},
+			ComputeManagerProjectIds:          pulumi.StringArray{},
+			CreateServiceAccount:              pulumi.Bool(false),
+			SetupCloudProxyWorkloadIdentity:   pulumi.Bool(false),
+			WorkloadIdentityNamespace:         pulumi.String(""),
+			CloudProxyServiceAccountNamespace: pulumi.String(""),
+			CloudProxyServiceAccountName:      pulumi.String(""),
+			CastaiRolePermissions:             pulumi.StringArray{},
+			ComputeManagerPermissions:         pulumi.StringArray{},
 		}
-		// CAST AI API token created in console.cast.ai API Access keys section.
-		castaiApiToken := cfg.Require("castaiApiToken")
-		// CAST AI gRPC URL
-		castaiGrpcUrl := "grpc.cast.ai:443"
-		if param := cfg.Get("castaiGrpcUrl"); param != "" {
-			castaiGrpcUrl = param
+		clusterRegion := "us-central1"
+		subnets := pulumi.StringArray{}
+		tags := pulumi.StringMap{}
+
+		gkeClusterArgs := GkeClusterArgs{
+			ApiUrl:                    pulumi.String("https://api.cast.ai"),
+			CastaiApiToken:            pulumi.String("my-token"),
+			GrpcUrl:                   pulumi.String("grpc.cast.ai:443"),
+			ApiGrpcAddr:               pulumi.String("grpc.cast.ai:443"),
+			KvisorControllerExtraArgs: pulumi.StringMap{},
+			ProjectId:                 pulumi.String("my-project"),
+			GkeClusterName:            pulumi.String("my-cluster"),
+			AutoscalerPoliciesJson:    pulumi.String(""),
+			AutoscalerSettings:        pulumi.StringMap{},
+			DeleteNodesOnDisconnect:   pulumi.Bool(true),
+			GkeClusterLocation:        pulumi.String("us-central1"),
+			GkeCredentials:            pulumi.String(""),
+			// CastaiComponentsLabels:       pulumi.StringArray{},
+			NodeConfigurations:           pulumi.StringMap{},
+			DefaultNodeConfiguration:     pulumi.String("default"),
+			DefaultNodeConfigurationName: pulumi.String("default"),
+			NodeTemplates:                pulumi.StringArray{},
+			WorkloadScalingPolicies:      pulumi.StringArray{},
+			InstallSecurityAgent:         pulumi.Bool(true),
+			AgentVersion:                 pulumi.String(""),
+			ClusterControllerVersion:     pulumi.String(""),
+			EvictorVersion:               pulumi.String(""),
+			EvictorExtVersion:            pulumi.String(""),
+			PodPinnerVersion:             pulumi.String(""),
+			SpotHandlerVersion:           pulumi.String(""),
+			KvisorVersion:                pulumi.String(""),
+			AgentValues:                  pulumi.StringArray{},
+			SpotHandlerValues:            pulumi.StringArray{},
+			ClusterControllerValues:      pulumi.StringArray{},
+			EvictorValues:                pulumi.StringArray{},
+			EvictorExtValues:             pulumi.StringArray{},
+			PodPinnerValues:              pulumi.StringArray{},
+			KvisorValues:                 pulumi.StringArray{},
+			SelfManaged:                  pulumi.Bool(false),
+			WaitForClusterReady:          pulumi.Bool(true),
+			InstallWorkloadAutoscaler:    pulumi.Bool(true),
+			WorkloadAutoscalerVersion:    pulumi.String(""),
+			WorkloadAutoscalerValues:     pulumi.StringArray{},
+			InstallCloudProxy:            pulumi.Bool(true),
+			CloudProxyVersion:            pulumi.String(""),
+			CloudProxyValues:             pulumi.StringArray{},
+			CloudProxyGrpcUrlOverride:    pulumi.String(""),
 		}
-		// Optional parameter, if set to true - CAST AI provisioned nodes will be deleted from cloud on cluster disconnection. For production use it is recommended to set it to false.
-		deleteNodesOnDisconnect := true
-		if param := cfg.GetBool("deleteNodesOnDisconnect"); param {
-			deleteNodesOnDisconnect = param
-		}
-		// Optional tags for new cluster nodes. This parameter applies only to new nodes - tags for old nodes are not reconciled.
-		tags := map[string]interface{}{}
-		if param := cfg.GetObject("tags"); param != nil {
-			tags = param
-		}
-		// Cluster subnets
-		subnets := cfg.Require("subnets")
-		// Configure Data sources and providers required for CAST AI connection.
-		_, err := organizations.GetClientConfig(ctx, map[string]interface{}{}, nil)
+
+		// Get the GCP client config
+		gkeClientConfig, err := organizations.GetClientConfig(ctx, nil, nil)
 		if err != nil {
 			return err
 		}
-		_ = container.LookupClusterOutput(ctx, container.GetClusterOutputArgs{
-			Name:     pulumi.String(clusterName),
+		token := gkeClientConfig.AccessToken
+
+		token = token
+
+		_ = container.LookupClusterOutput(ctx, container.LookupClusterOutputArgs{
+			Name:     gkeArgs.GkeClusterName,
 			Location: pulumi.String(clusterRegion),
-			Project:  pulumi.String(projectId),
+			Project:  gkeArgs.ProjectId,
 		}, nil)
-		_, err = NewGkeIam050(ctx, "castai-gke-iam", &GkeIam050Args{
-			ProjectId:      projectId,
-			GkeClusterName: clusterName,
+
+		_, err = NewGkeIam(ctx, "castai-gke-iam", &GkeIamArgs{
+			ProjectId:      gkeArgs.ProjectId,
+			GkeClusterName: gkeArgs.GkeClusterName,
 		})
 		if err != nil {
 			return err
 		}
-		_, err = NewGkeCluster7120(ctx, "castai-gke-cluster", &GkeCluster7120Args{
-			ApiUrl:                    castaiApiUrl,
-			CastaiApiToken:            castaiApiToken,
-			GrpcUrl:                   castaiGrpcUrl,
-			WaitForClusterReady:       true,
-			ProjectId:                 projectId,
-			GkeClusterName:            clusterName,
-			GkeClusterLocation:        clusterRegion,
-			GkeCredentials:            castai_gke_iam.PrivateKey,
-			DeleteNodesOnDisconnect:   deleteNodesOnDisconnect,
-			InstallWorkloadAutoscaler: true,
+
+		_, err = NewGkeCluster(ctx, "castai-gke-cluster", &GkeClusterArgs{
+			ApiUrl:                    gkeClusterArgs.ApiUrl,
+			CastaiApiToken:            gkeClusterArgs.CastaiApiToken,
+			GrpcUrl:                   gkeClusterArgs.GrpcUrl,
+			WaitForClusterReady:       gkeClusterArgs.WaitForClusterReady,
+			ProjectId:                 gkeClusterArgs.ProjectId,
+			GkeClusterName:            gkeClusterArgs.GkeClusterName,
+			GkeClusterLocation:        gkeClusterArgs.GkeClusterLocation,
+			GkeCredentials:            gkeClusterArgs.GkeCredentials,
+			DeleteNodesOnDisconnect:   gkeClusterArgs.DeleteNodesOnDisconnect,
+			InstallWorkloadAutoscaler: gkeClusterArgs.InstallWorkloadAutoscaler,
 			NodeConfigurations: map[string]interface{}{
 				"default": map[string]interface{}{
 					"minDiskSize":  100,
