@@ -1,0 +1,16 @@
+creds*
+
+.vscode
+
+certs/
+**/kubeconfig.yaml
+
+Pulumi.*-*.yaml
+*.log
+
+*.crt
+*.key
+*.pem
+*.csr
+*.pfx
+*.zip

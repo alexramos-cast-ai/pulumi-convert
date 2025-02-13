@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/pulumi/pulumi-castai/sdk/go/castai"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/serviceaccount"
 	"github.com/pulumi/pulumi-std/sdk/go/std"
+	castai "github.com/pulumi/pulumi-terraform-provider/sdks/go/castai/v7"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
@@ -37,9 +37,9 @@ type GkeIam struct {
 	DefaultCastaiRolePermissions     pulumi.AnyOutput
 }
 
-func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIam050Args, opts ...pulumi.ResourceOption) (*GkeIam050, error) {
+func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulumi.ResourceOption) (*GkeIam, error) {
 	var componentResource GkeIam
-	err := ctx.RegisterComponentResource("components:index:GkeIam050", name, &componentResource, opts...)
+	err := ctx.RegisterComponentResource("components:index:GkeIam", name, &componentResource, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,8 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIam050Args, opts ...pu
 	}).(pulumi.StringOutput)
 	conditionExpression := std.JoinOutput(ctx, std.JoinOutputArgs{
 		Separator: pulumi.String("||"),
-		Input:     []pulumi.String(notImplemented("formatlist(\"resource.name.startsWith(\\\"projects/-/serviceAccounts/%s\\\")\",var.service_accounts_unique_ids)")),
+		Input: []pulumi.String(
+			("formatlist(\"resource.name.startsWith(\\\"projects/-/serviceAccounts/%s\\\")\",var.service_accounts_unique_ids)")),
 	}, nil).ApplyT(func(invoke std.JoinResult) (*string, error) {
 		return invoke.Result, nil
 	}).(pulumi.StringPtrOutput)
