@@ -1,0 +1,10 @@
+{
+  "resource": true,
+  "name": "terraform-provider",
+  "version": "0.8.1",
+  "parameterization": {
+    "name": "castai",
+    "version": "7.36.0",
+    "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2Nhc3RhaS9jYXN0YWkiLCJ2ZXJzaW9uIjoiNy4zNi4wIn19"
+  }
+}

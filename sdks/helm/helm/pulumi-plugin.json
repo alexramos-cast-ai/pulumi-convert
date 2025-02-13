@@ -1,0 +1,10 @@
+{
+  "resource": true,
+  "name": "terraform-provider",
+  "version": "0.8.1",
+  "parameterization": {
+    "name": "helm",
+    "version": "2.17.0",
+    "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2hhc2hpY29ycC9oZWxtIiwidmVyc2lvbiI6IjIuMTcuMCJ9fQ=="
+  }
+}

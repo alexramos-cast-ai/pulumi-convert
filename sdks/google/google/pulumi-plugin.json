@@ -1,0 +1,10 @@
+{
+  "resource": true,
+  "name": "terraform-provider",
+  "version": "0.8.1",
+  "parameterization": {
+    "name": "google",
+    "version": "6.20.0",
+    "value": "eyJyZW1vdGUiOnsidXJsIjoicmVnaXN0cnkub3BlbnRvZnUub3JnL2hhc2hpY29ycC9nb29nbGUiLCJ2ZXJzaW9uIjoiNi4yMC4wIn19"
+  }
+}
