@@ -1,9 +1,9 @@
 # pulumi-convert
-
+This is an attempt to use the `pulumi convert --from terraform --language go --out <output_path>`
 ## Requirements
 
-pulumi cli
-go
+- pulumi cli
+- go
 
 ## Trying it out
 
