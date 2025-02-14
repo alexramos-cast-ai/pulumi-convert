@@ -5,9 +5,8 @@ import (
 
 	// "github.com/pulumi/pulumi-castai/sdk/go/castai"
 	// "github.com/pulumi/pulumi-helm/sdk/go/helm"
-	"github.com/pulumi/pulumi-command/sdk/go/command/local"
+
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
-	"github.com/pulumi/pulumi-null/sdk/go/null"
 	"github.com/pulumi/pulumi-terraform-provider/sdks/go/castai/v7/castai"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -270,289 +269,158 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	if err != nil {
 		return nil, err
 	}
-	castaiPodPinner = append(castaiPodPinner, __res)
 
-	var tmp2 float64
-	if args.SelfManaged {
-		tmp2 = 0
-	} else {
-		tmp2 = 1
+	// TODO: Support condition for sef-manage component
+	// var tmp2 float64
+	// if args.SelfManaged {
+	// 	tmp2 = 0
+	// } else {
+	// 	tmp2 = 1
+	// }
+	controllerValues := pulumi.Map{
+		"castai": pulumi.Map{
+			"apiKey":    pulumi.StringInput(castaiCluster.ClusterToken),
+			"clusterID": pulumi.StringInput(castaiCluster.GkeClusterId),
+		},
 	}
-	var castaiClusterController []*helm.Release
-	for index := 0; index < tmp2; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-			},
-			Name:            "cluster-controller",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-cluster-controller",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.ClusterControllerVersion,
-			Values:          args.ClusterControllerValues,
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiClusterController = append(castaiClusterController, __res)
-	}
-	var tmp3 float64
-	if args.SelfManaged {
-		tmp3 = 1
-	} else {
-		tmp3 = 0
-	}
-	var castaiClusterControllerSelfManaged []*helm.Release
-	for index := 0; index < tmp3; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller_self_managed-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-			},
-			Name:            "cluster-controller",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-cluster-controller",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.ClusterControllerVersion,
-			Values:          args.ClusterControllerValues,
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiClusterControllerSelfManaged = append(castaiClusterControllerSelfManaged, __res)
-	}
-	var tmp4 float64
-	if args.WaitForClusterReady {
-		tmp4 = 1
-	} else {
-		tmp4 = 0
-	}
-	var waitForCluster []*null.Resource
-	for index := 0; index < tmp4; index++ {
-		key0 := index
-		_ := index
-		__res, err := null.NewResource(ctx, fmt.Sprintf("%s-wait_for_cluster-%v", name, key0), nil, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiClusterController,
-			castaiAgent,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		waitForCluster = append(waitForCluster, __res)
-	}
-	_, err = local.NewCommand(ctx, fmt.Sprintf("%s-waitForClusterProvisioner0", name), &local.CommandArgs{
-		Create: pulumi.Sprintf(`RETRY_COUNT=20
-POOLING_INTERVAL=30
 
-for i in $(seq 1 $RETRY_COUNT); do
-    sleep $POOLING_INTERVAL
-    curl -s %v/v1/kubernetes/external-clusters/%v -H \"x-api-key: $API_KEY\" | grep '\"status\"\\s*:\\s*\"ready\"' && exit 0doneecho \"Cluster is not ready after 10 minutes\"exit 1
-`, args.ApiUrl, castaiCluster.Id),
-		Interpreter: pulumi.StringArray{
-			pulumi.String("bash"),
-			pulumi.String("-c"),
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller", name), &helm.ReleaseArgs{
+		Name:            pulumi.String("cluster-controller"),
+		Chart:           pulumi.String("castai-cluster-controller"),
+		Namespace:       pulumi.String("castai-agent"),
+		CreateNamespace: pulumi.Bool(true),
+		CleanupOnFail:   pulumi.Bool(true),
+		Version:         args.ClusterControllerVersion,
+		Values:          controllerValues,
+		RepositoryOpts: &helm.RepositoryOptsArgs{
+			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
-		Environment: pulumi.StringMap{
-			"API_KEY": args.CastaiApiToken,
-		},
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		waitForCluster,
-	}))
-	if err != nil {
-		return nil, err
-	}
-	var tmp5 float64
-	if args.SelfManaged {
-		tmp5 = 1
-	} else {
-		tmp5 = 0
-	}
-	var castaiEvictorSelfManaged []*helm.Release
-	for index := 0; index < tmp5; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_self_managed-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai-evictor-ext.enabled",
-					"value": "false",
-				},
-				map[string]interface{}{
-					"name":  "managedByCASTAI",
-					"value": "false",
-				},
-			},
-			Name:            "castai-evictor",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-evictor",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.EvictorVersion,
-			Values:          args.EvictorValues,
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiEvictorSelfManaged = append(castaiEvictorSelfManaged, __res)
-	}
-	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_ext", name), &helm.ReleaseArgs{
-		Name:            "castai-evictor-ext",
-		Repository:      "https://castai.github.io/helm-charts",
-		Chart:           "castai-evictor-ext",
-		Namespace:       "castai-agent",
-		CreateNamespace: false,
-		CleanupOnFail:   true,
-		Wait:            true,
-		Version:         args.EvictorExtVersion,
-		Values:          args.EvictorExtValues,
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiEvictor,
-	}))
-	if err != nil {
-		return nil, err
-	}
-	var tmp6 float64
-	if args.SelfManaged {
-		tmp6 = 1
-	} else {
-		tmp6 = 0
-	}
-	var castaiPodPinnerSelfManaged []*helm.Release
-	for index := 0; index < tmp6; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_pod_pinner_self_managed-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-				map[string]interface{}{
-					"name":  "managedByCASTAI",
-					"value": "false",
-				},
-			},
-			Name:            "castai-pod-pinner",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-pod-pinner",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.PodPinnerVersion,
-			Values:          args.PodPinnerValues,
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiPodPinnerSelfManaged = append(castaiPodPinnerSelfManaged, __res)
-	}
-	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_spot_handler", name), &helm.ReleaseArgs{
-		Set: []interface{}{
-			map[string]interface{}{
-				"name":  "castai.provider",
-				"value": "gcp",
-			},
-			map[string]interface{}{
-				"name":  "createNamespace",
-				"value": "false",
-			},
-			map[string]interface{}{
-				"name":  "castai.clusterID",
-				"value": castaiCluster.Id,
-			},
-		},
-		Name:            "castai-spot-handler",
-		Repository:      "https://castai.github.io/helm-charts",
-		Chart:           "castai-spot-handler",
-		Namespace:       "castai-agent",
-		CreateNamespace: true,
-		CleanupOnFail:   true,
-		Wait:            true,
-		Version:         args.SpotHandlerVersion,
-		Values:          args.SpotHandlerValues,
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
 		castaiAgent,
 	}))
 	if err != nil {
 		return nil, err
 	}
-	var tmp7 float64
-	if args.InstallSecurityAgent && !args.SelfManaged {
-		tmp7 = 1
-	} else {
-		tmp7 = 0
+
+	// TODO: Check this NewCommand which I think only waits for cluster to be ready
+	// 	_, err = local.NewCommand(ctx, fmt.Sprintf("%s-waitForClusterProvisioner0", name), &local.CommandArgs{
+	// 		Create: pulumi.Sprintf(`RETRY_COUNT=20
+	// POOLING_INTERVAL=30
+
+	// for i in $(seq 1 $RETRY_COUNT); do
+	//     sleep $POOLING_INTERVAL
+	//     curl -s %v/v1/kubernetes/external-clusters/%v -H \"x-api-key: $API_KEY\" | grep '\"status\"\\s*:\\s*\"ready\"' && exit 0doneecho \"Cluster is not ready after 10 minutes\"exit 1
+	// `, args.ApiUrl, castaiCluster.Id),
+	// 		Interpreter: pulumi.StringArray{
+	// 			pulumi.String("bash"),
+	// 			pulumi.String("-c"),
+	// 		},
+	// 		Environment: pulumi.StringMap{
+	// 			"API_KEY": args.CastaiApiToken,
+	// 		},
+	// 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+	// 		waitForCluster,
+	// 	}))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+
+	// TODO: Support condition if enabled
+	// var tmp5 float64
+	// if args.SelfManaged {
+	// 	tmp5 = 1
+	// } else {
+	// 	tmp5 = 0
+	// }
+	evictorValues := pulumi.Map{
+		// TODO: evictorValues
 	}
-	var castaiKvisor []*helm.Release
-	for index := 0; index < tmp7; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_kvisor-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-				map[string]interface{}{
-					"name":  "castai.grpcAddr",
-					"value": args.ApiGrpcAddr,
-				},
-				map[string]interface{}{
-					"name":  "controller.extraArgs.kube-bench-cloud-provider",
-					"value": "gke",
-				},
+
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_self_managed", name), &helm.ReleaseArgs{
+		Name:            pulumi.String("castai-evictor"),
+		Chart:           pulumi.String("castai-evictor"),
+		Namespace:       pulumi.String("castai-agent"),
+		CreateNamespace: pulumi.Bool(true),
+		CleanupOnFail:   pulumi.Bool(true),
+		Version:         args.EvictorVersion,
+		Values:          evictorValues,
+		RepositoryOpts: &helm.RepositoryOptsArgs{
+			Repo: pulumi.String("https://castai.github.io/helm-charts"),
+		},
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAgent,
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Whats evictor-ext
+	// _, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_ext", name), &helm.ReleaseArgs{
+	// 	Name:            "castai-evictor-ext",
+	// 	Repository:      "https://castai.github.io/helm-charts",
+	// 	Chart:           "castai-evictor-ext",
+	// 	Namespace:       "castai-agent",
+	// 	CreateNamespace: false,
+	// 	CleanupOnFail:   true,
+	// 	Wait:            true,
+	// 	Version:         args.EvictorExtVersion,
+	// 	Values:          args.EvictorExtValues,
+	// }, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+	// 	castaiEvictor,
+	// }))
+	// if err != nil {
+	// 	return nil, err
+	// }
+	
+	spotHandlerValues := pulumi.Map{
+		"castai": pulumi.Map{
+			"provider": pulumi.String("gcp"),
+			"clusterID": pulumi.StringInput(castaiCluster.GkeClusterId),
+		},
+	}
+
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_spot_handler", name), &helm.ReleaseArgs{
+		Name:            pulumi.String("castai-spot-handler"),
+		Chart:           pulumi.String("castai-spot-handler"),
+		Namespace:       pulumi.String("castai-agent"),
+		CreateNamespace: pulumi.Bool(true),
+		CleanupOnFail:   pulumi.Bool(true),
+		Version:         args.SpotHandlerVersion,
+		Values:          spotHandlerValues,
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAgent,
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Support Condition for installing kvisor
+	// var tmp7 float64
+	// if args.InstallSecurityAgent && !args.SelfManaged {
+	// 	tmp7 = 1
+	// } else {
+	// 	tmp7 = 0
+	// }
+
+	kvisorValues := pulumi.Map{
+		"castai": pulumi.Map{
+			"clusterID": castaiCluster.GkeClusterId,
+			"apiKey": 
+		},
+		"controller": pulumi.Map{
+			"extraArgs": pulumi.Map{
+				"kube-bench-cloud-provider": pulumi.String("gke"),
 			},
-			Name:            "castai-kvisor",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-kvisor",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
+		},
+	}
+	_, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_kvisor", name), &helm.ReleaseArgs{
+			Name:            pulumi.String("castai-kvisor"),
+			Chart:           pulumi.String("castai-kvisor"),
+			Namespace:       pulumi.String("castai-agent"),
+			CreateNamespace: pulumi.Bool(true),
+			CleanupOnFail:   pulumi.Bool(true),
 			Version:         args.KvisorVersion,
-			Values:          args.KvisorValues,
+			Values:          kvisorValues,
 			SetSensitive: []map[string]interface{}{
 				map[string]interface{}{
 					"name":  "castai.apiKey",
