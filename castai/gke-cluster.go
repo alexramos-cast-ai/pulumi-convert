@@ -30,7 +30,7 @@ type GkeClusterArgs struct {
 	GkeClusterLocation           pulumi.StringInput
 	GkeCredentials               pulumi.StringInput
 	CastaiComponentsLabels       map[string]interface{}
-	NodeConfigurations           interface{}
+	NodeConfigurations           pulumi.StringMap
 	DefaultNodeConfiguration     pulumi.StringInput
 	DefaultNodeConfigurationName pulumi.StringInput
 	NodeTemplates                interface{}
@@ -68,12 +68,7 @@ type GkeCluster struct {
 	CastaiNodeTemplates      pulumi.AnyOutput
 }
 
-func NewGkeCluster(
-	ctx *pulumi.Context,
-	name string,
-	args *GkeClusterArgs,
-	opts ...pulumi.ResourceOption,
-) (*GkeCluster, error) {
+func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts ...pulumi.ResourceOption) (*GkeCluster, error) {
 	var componentResource GkeCluster
 	err := ctx.RegisterComponentResource("components:index:GkeCluster7120", name, &componentResource, opts...)
 	if err != nil {
@@ -89,17 +84,17 @@ func NewGkeCluster(
 	if err != nil {
 		return nil, err
 	}
-	var this []*castai.NodeConfiguration
-	for key0, _ := range "TODO: For expression" {
-		__res, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-%v", name, key0), &castai.NodeConfigurationArgs{
-			Gke: []map[string]interface{}{
-				map[string]interface{}{
-					"loadbalancers":               "TODO: For expression",
-					"maxPodsPerNode":              notImplemented("try(each.value.max_pods_per_node,110)"),
-					"networkTags":                 notImplemented("try(each.value.network_tags,null)"),
-					"diskType":                    notImplemented("try(each.value.disk_type,null)"),
-					"useEphemeralStorageLocalSsd": notImplemented("try(each.value.use_ephemeral_storage_local_ssd,null)"),
-				},
+
+	// NODE CONFIGURATION
+	// var this []*castai.NodeConfiguration
+	for _, value := range args.NodeConfigurations {
+		__res, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
+			Gke: &castai.NodeConfigurationGkePtrInput{
+				"loadbalancers":               "TODO: For expression",
+				"maxPodsPerNode":              notImplemented("try(each.value.max_pods_per_node,110)"),
+				"networkTags":                 notImplemented("try(each.value.network_tags,null)"),
+				"diskType":                    notImplemented("try(each.value.disk_type,null)"),
+				"useEphemeralStorageLocalSsd": notImplemented("try(each.value.use_ephemeral_storage_local_ssd,null)"),
 			},
 			ClusterId:       castaiCluster.Id,
 			Name:            notImplemented("try(each.value.name,each.key)"),
