@@ -12,17 +12,17 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
 		gkeArgs := gke.GkeIamArgs{
-			ProjectId:                         pulumi.String("my-project"),
-			GkeClusterName:                    pulumi.String("my-cluster"),
-			ServiceAccountsUniqueIds:          pulumi.StringArray{},
-			ComputeManagerProjectIds:          pulumi.StringArray{},
-			CreateServiceAccount:              pulumi.Bool(false),
-			SetupCloudProxyWorkloadIdentity:   pulumi.Bool(false),
-			WorkloadIdentityNamespace:         pulumi.String(""),
-			CloudProxyServiceAccountNamespace: pulumi.String(""),
-			CloudProxyServiceAccountName:      pulumi.String(""),
-			CastaiRolePermissions:             pulumi.StringArray{},
-			ComputeManagerPermissions:         pulumi.StringArray{},
+			ProjectId:      pulumi.String("my-project"),
+			GkeClusterName: pulumi.String("my-cluster"),
+			// ServiceAccountsUniqueIds:          pulumi.StringArray{},
+			// ComputeManagerProjectIds:          pulumi.StringArray{},
+			// CreateServiceAccount:              pulumi.Bool(false),
+			// SetupCloudProxyWorkloadIdentity:   pulumi.Bool(false),
+			// WorkloadIdentityNamespace:         pulumi.String(""),
+			// CloudProxyServiceAccountNamespace: pulumi.String(""),
+			// CloudProxyServiceAccountName:      pulumi.String(""),
+			CastaiRolePermissions:     pulumi.StringArray{},
+			ComputeManagerPermissions: pulumi.StringArray{},
 		}
 		clusterRegion := "us-central1"
 		subnets := pulumi.StringArray{}
@@ -42,7 +42,7 @@ func main() {
 			GkeClusterLocation:        pulumi.String("us-central1"),
 			GkeCredentials:            pulumi.String(""),
 			// CastaiComponentsLabels:       pulumi.StringArray{},
-			NodeConfigurations:           pulumi.StringMap{},
+			NodeConfigurations:           pulumi.Map{},
 			DefaultNodeConfiguration:     pulumi.String("default"),
 			DefaultNodeConfigurationName: pulumi.String("default"),
 			NodeTemplates:                pulumi.StringArray{},
@@ -107,10 +107,10 @@ func main() {
 			GkeCredentials:            gkeClusterArgs.GkeCredentials,
 			DeleteNodesOnDisconnect:   gkeClusterArgs.DeleteNodesOnDisconnect,
 			InstallWorkloadAutoscaler: gkeClusterArgs.InstallWorkloadAutoscaler,
-			NodeConfigurations: map[string]interface{}{
-				"default": map[string]interface{}{
-					"minDiskSize":  100,
-					"diskCpuRatio": 0,
+			NodeConfigurations: pulumi.Map{
+				"default": pulumi.Map{
+					"minDiskSize":  pulumi.String("100"),
+					"diskCpuRatio": pulumi.String("0"),
 					"subnets":      subnets,
 					"tags":         tags,
 				},

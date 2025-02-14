@@ -4,6 +4,7 @@ package gke
 
 // }
 
+// TODO: Support Workload identity
 // var tmp7 string
 // if args.WorkloadIdentityNamespace != "" {
 // 	tmp7 = args.WorkloadIdentityNamespace
