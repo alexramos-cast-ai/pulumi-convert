@@ -69,7 +69,7 @@ type GkeCluster struct {
 
 func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts ...pulumi.ResourceOption) (*GkeCluster, error) {
 	var componentResource GkeCluster
-	err := ctx.RegisterComponentResource("components:index:GkeCluster7120", name, &componentResource, opts...)
+	err := ctx.RegisterComponentResource("components:index:GkeCluster", name, &componentResource, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,107 +82,6 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	}, pulumi.Parent(&componentResource))
 	if err != nil {
 		return nil, err
-	}
-
-	// NODE CONFIGURATION
-	// TODO: Support custom node configuration
-	// var this []*castai.NodeConfiguration
-	// for _, value := range args.NodeConfigurations {
-	// 	__res, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
-	// 		Gke: &castai.NodeConfigurationGkePtrInput{
-	// 			"loadbalancers":               "TODO: For expression",
-	// 			"maxPodsPerNode":              notImplemented("try(each.value.max_pods_per_node,110)"),
-	// 			"networkTags":                 notImplemented("try(each.value.network_tags,null)"),
-	// 			"diskType":                    notImplemented("try(each.value.disk_type,null)"),
-	// 			"useEphemeralStorageLocalSsd": notImplemented("try(each.value.use_ephemeral_storage_local_ssd,null)"),
-	// 		},
-	// 		ClusterId:       castaiCluster.Id,
-	// 		Name:            notImplemented("try(each.value.name,each.key)"),
-	// 		DiskCpuRatio:    notImplemented("try(each.value.disk_cpu_ratio,0)"),
-	// 		DrainTimeoutSec: notImplemented("try(each.value.drain_timeout_sec,0)"),
-	// 		MinDiskSize:     notImplemented("try(each.value.min_disk_size,100)"),
-	// 		Subnets:         notImplemented("try(each.value.subnets,null)"),
-	// 		SshPublicKey:    notImplemented("try(each.value.ssh_public_key,null)"),
-	// 		Image:           notImplemented("try(each.value.image,null)"),
-	// 		Tags:            notImplemented("try(each.value.tags,{})"),
-	// 		InitScript:      notImplemented("try(each.value.init_script,null)"),
-	// 	}, pulumi.Parent(&componentResource))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	this = append(this, __res)
-	// }
-
-	// Default node configuration
-	_, err = castai.NewNodeConfigurationDefault(ctx, fmt.Sprintf("%s-this", name), &castai.NodeConfigurationDefaultArgs{
-		ClusterId: castaiCluster.GkeClusterId,
-		// ConfigurationId: %!v(PANIC=Format method: fatal: A failure has occurred: unlowered conditional expression @ main.pp:43,21-122),
-	}, pulumi.Parent(&componentResource))
-	if err != nil {
-		return nil, err
-	}
-
-	castaiAutoscalerPolicies, err := castai.NewAutoscaler(ctx, fmt.Sprintf("%s-castai_autoscaler_policies", name), &castai.AutoscalerArgs{
-		AutoscalerSettings:     "TODO: For expression",
-		ClusterId:              castaiCluster.Id,
-		AutoscalerPoliciesJson: args.AutoscalerPoliciesJson,
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
-		castaiEvictor,
-		castaiPodPinner,
-	}))
-	if err != nil {
-		return nil, err
-	}
-	var thisNodeTemplate []*castai.NodeTemplate
-	for key0, _ := range "TODO: For expression" {
-		__res, err := castai.NewNodeTemplate(ctx, fmt.Sprintf("%s-this-%v", name, key0), &castai.NodeTemplateArgs{
-			CustomTaints: "TODO: For expression",
-			Constraints:  "TODO: For expression",
-			ClusterId:    castaiCluster.Id,
-			Name:         notImplemented("try(each.value.name,each.key)"),
-			// ConfigurationId: %!v(PANIC=Format method: fatal: A failure has occurred: unlowered conditional expression @ main.pp:114,46-210),
-			IsDefault:                                notImplemented("try(each.value.is_default,false)"),
-			IsEnabled:                                notImplemented("try(each.value.is_enabled,true)"),
-			ShouldTaint:                              notImplemented("try(each.value.should_taint,true)"),
-			CustomInstancesEnabled:                   notImplemented("try(each.value.custom_instances_enabled,false)"),
-			CustomInstancesWithExtendedMemoryEnabled: notImplemented("try(each.value.custom_instances_with_extended_memory_enabled,false)"),
-			CustomLabels:                             notImplemented("try(each.value.custom_labels,{})"),
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAutoscalerPolicies,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		thisNodeTemplate = append(thisNodeTemplate, __res)
-	}
-	var thisWorkloadScalingPolicy []*castai.WorkloadScalingPolicy
-	for key0, _ := range "TODO: For expression" {
-		__res, err := castai.NewWorkloadScalingPolicy(ctx, fmt.Sprintf("%s-this-%v", name, key0), &castai.WorkloadScalingPolicyArgs{
-			Name:             notImplemented("try(each.value.name,each.key)"),
-			ClusterId:        castaiCluster.Id,
-			ApplyType:        notImplemented("try(each.value.apply_type,\"DEFERRED\")"),
-			ManagementOption: notImplemented("try(each.value.management_option,\"READ_ONLY\")"),
-			Cpu: []map[string]interface{}{
-				map[string]interface{}{
-					"function":       notImplemented("try(each.value.cpu.function,\"QUANTILE\")"),
-					"overhead":       notImplemented("try(each.value.cpu.overhead,0)"),
-					"applyThreshold": notImplemented("try(each.value.cpu.apply_threshold,0.1)"),
-					"args":           notImplemented("try(each.value.cpu.args,[\"0.8\"])"),
-				},
-			},
-			Memory: []map[string]interface{}{
-				map[string]interface{}{
-					"function":       notImplemented("try(each.value.memory.function,\"MAX\")"),
-					"overhead":       notImplemented("try(each.value.memory.overhead,0.1)"),
-					"applyThreshold": notImplemented("try(each.value.memory.apply_threshold,0.1)"),
-				},
-			},
-		}, pulumi.Parent(&componentResource))
-		if err != nil {
-			return nil, err
-		}
-		thisWorkloadScalingPolicy = append(thisWorkloadScalingPolicy, __res)
 	}
 
 	// Helm release
@@ -219,7 +118,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	// 	tmp0 = 1
 	// }
 	evictorValues := pulumi.Map{}
-	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor", name), &helm.ReleaseArgs{
+	castaiEvictor, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor", name), &helm.ReleaseArgs{
 		Name:            pulumi.String("castai-evictor"),
 		Chart:           pulumi.String("castai-evictor"),
 		Namespace:       pulumi.String("castai-agent"),
@@ -284,7 +183,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		},
 	}
 
-	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller", name), &helm.ReleaseArgs{
+	castaiClusterController, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller", name), &helm.ReleaseArgs{
 		Name:            pulumi.String("cluster-controller"),
 		Chart:           pulumi.String("castai-cluster-controller"),
 		Namespace:       pulumi.String("castai-agent"),
@@ -332,27 +231,6 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	// } else {
 	// 	tmp5 = 0
 	// }
-	evictorValues := pulumi.Map{
-		// TODO: evictorValues
-	}
-
-	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_self_managed", name), &helm.ReleaseArgs{
-		Name:            pulumi.String("castai-evictor"),
-		Chart:           pulumi.String("castai-evictor"),
-		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
-		CleanupOnFail:   pulumi.Bool(true),
-		Version:         args.EvictorVersion,
-		Values:          evictorValues,
-		RepositoryOpts: &helm.RepositoryOptsArgs{
-			Repo: pulumi.String("https://castai.github.io/helm-charts"),
-		},
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
-	}))
-	if err != nil {
-		return nil, err
-	}
 
 	// TODO: Whats evictor-ext
 	// _, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor_ext", name), &helm.ReleaseArgs{
@@ -371,10 +249,10 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	// if err != nil {
 	// 	return nil, err
 	// }
-	
+
 	spotHandlerValues := pulumi.Map{
 		"castai": pulumi.Map{
-			"provider": pulumi.String("gcp"),
+			"provider":  pulumi.String("gcp"),
 			"clusterID": pulumi.StringInput(castaiCluster.GkeClusterId),
 		},
 	}
@@ -387,6 +265,9 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.SpotHandlerVersion,
 		Values:          spotHandlerValues,
+		RepositoryOpts: &helm.RepositoryOptsArgs{
+			Repo: pulumi.String("https://castai.github.io/helm-charts"),
+		},
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
 		castaiAgent,
 	}))
@@ -405,7 +286,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	kvisorValues := pulumi.Map{
 		"castai": pulumi.Map{
 			"clusterID": castaiCluster.GkeClusterId,
-			"apiKey": 
+			"apiKey":    pulumi.String(""),
 		},
 		"controller": pulumi.Map{
 			"extraArgs": pulumi.Map{
@@ -413,204 +294,234 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			},
 		},
 	}
-	_, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_kvisor", name), &helm.ReleaseArgs{
-			Name:            pulumi.String("castai-kvisor"),
-			Chart:           pulumi.String("castai-kvisor"),
-			Namespace:       pulumi.String("castai-agent"),
-			CreateNamespace: pulumi.Bool(true),
-			CleanupOnFail:   pulumi.Bool(true),
-			Version:         args.KvisorVersion,
-			Values:          kvisorValues,
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource))
-		if err != nil {
-			return nil, err
-		}
-		castaiKvisor = append(castaiKvisor, __res)
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_kvisor", name), &helm.ReleaseArgs{
+		Name:            pulumi.String("castai-kvisor"),
+		Chart:           pulumi.String("castai-kvisor"),
+		Namespace:       pulumi.String("castai-agent"),
+		CreateNamespace: pulumi.Bool(true),
+		CleanupOnFail:   pulumi.Bool(true),
+		Version:         args.KvisorVersion,
+		Values:          kvisorValues,
+		// SetSensitive: []map[string]interface{}{
+		// 	map[string]interface{}{
+		// 		"name":  "castai.apiKey",
+		// 		"value": castaiCluster.ClusterToken,
+		// 	},
+		// },
+		RepositoryOpts: &helm.RepositoryOptsArgs{
+			Repo: pulumi.String("https://castai.github.io/helm-charts"),
+		},
+	}, pulumi.Parent(&componentResource))
+	if err != nil {
+		return nil, err
 	}
-	var tmp8 float64
-	if args.InstallCloudProxy {
-		tmp8 = 1
-	} else {
-		tmp8 = 0
+
+	// TODO: Add support for CloudProxy
+	// var tmp8 float64
+	// if args.InstallCloudProxy {
+	// 	tmp8 = 1
+	// } else {
+	// 	tmp8 = 0
+	// }
+	// var castaiCloudProxy []*helm.Release
+	// for index := 0; index < tmp8; index++ {
+	// 	key0 := index
+	// 	_ := index
+	// 	__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cloud_proxy-%v", name, key0), &helm.ReleaseArgs{
+	// 		Name:            "castai-cloud-proxy",
+	// 		Repository:      "https://castai.github.io/helm-charts",
+	// 		Chart:           "castai-cloud-proxy",
+	// 		Version:         args.CloudProxyVersion,
+	// 		Namespace:       "castai-agent",
+	// 		CreateNamespace: true,
+	// 		CleanupOnFail:   true,
+	// 		Wait:            true,
+	// 		Values:          args.CloudProxyValues,
+	// 		Set: []map[string]interface{}{
+	// 			map[string]interface{}{
+	// 				"name":  "castai.clusterID",
+	// 				"value": castaiCluster.Id,
+	// 			},
+	// 			map[string]interface{}{
+	// 				"name":  "castai.grpcURL",
+	// 				"value": notImplemented("coalesce(var.cloud_proxy_grpc_url_override,var.grpc_url)"),
+	// 			},
+	// 		},
+	// 		SetSensitive: []map[string]interface{}{
+	// 			map[string]interface{}{
+	// 				"name":  "castai.apiKey",
+	// 				"value": castaiCluster.ClusterToken,
+	// 			},
+	// 		},
+	// 	}, pulumi.Parent(&componentResource))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	castaiCloudProxy = append(castaiCloudProxy, __res)
+	// }
+	// var tmp9 float64
+	// if args.InstallSecurityAgent && args.SelfManaged {
+	// 	tmp9 = 1
+	// } else {
+	// 	tmp9 = 0
+	// }
+
+	// NODE CONFIGURATION
+	// TODO: Support custom node configuration
+	// var this []*castai.NodeConfiguration
+	// for _, value := range args.NodeConfigurations {
+	// 	__res, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
+	// 		Gke: &castai.NodeConfigurationGkePtrInput{
+	// 			"loadbalancers":               "TODO: For expression",
+	// 			"maxPodsPerNode":              notImplemented("try(each.value.max_pods_per_node,110)"),
+	// 			"networkTags":                 notImplemented("try(each.value.network_tags,null)"),
+	// 			"diskType":                    notImplemented("try(each.value.disk_type,null)"),
+	// 			"useEphemeralStorageLocalSsd": notImplemented("try(each.value.use_ephemeral_storage_local_ssd,null)"),
+	// 		},
+	// 		ClusterId:       castaiCluster.Id,
+	// 		Name:            notImplemented("try(each.value.name,each.key)"),
+	// 		DiskCpuRatio:    notImplemented("try(each.value.disk_cpu_ratio,0)"),
+	// 		DrainTimeoutSec: notImplemented("try(each.value.drain_timeout_sec,0)"),
+	// 		MinDiskSize:     notImplemented("try(each.value.min_disk_size,100)"),
+	// 		Subnets:         notImplemented("try(each.value.subnets,null)"),
+	// 		SshPublicKey:    notImplemented("try(each.value.ssh_public_key,null)"),
+	// 		Image:           notImplemented("try(each.value.image,null)"),
+	// 		Tags:            notImplemented("try(each.value.tags,{})"),
+	// 		InitScript:      notImplemented("try(each.value.init_script,null)"),
+	// 	}, pulumi.Parent(&componentResource))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	this = append(this, __res)
+	// }
+
+	// Default node configuration
+	nodeConfigurationRes, err := castai.NewNodeConfigurationDefault(ctx, fmt.Sprintf("%s-this", name), &castai.NodeConfigurationDefaultArgs{
+		ClusterId: castaiCluster.GkeClusterId,
+		// ConfigurationId: %!v(PANIC=Format method: fatal: A failure has occurred: unlowered conditional expression @ main.pp:43,21-122),
+	}, pulumi.Parent(&componentResource))
+	if err != nil {
+		return nil, err
 	}
-	var castaiCloudProxy []*helm.Release
-	for index := 0; index < tmp8; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cloud_proxy-%v", name, key0), &helm.ReleaseArgs{
-			Name:            "castai-cloud-proxy",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-cloud-proxy",
-			Version:         args.CloudProxyVersion,
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Values:          args.CloudProxyValues,
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-				map[string]interface{}{
-					"name":  "castai.grpcURL",
-					"value": notImplemented("coalesce(var.cloud_proxy_grpc_url_override,var.grpc_url)"),
-				},
-			},
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource))
-		if err != nil {
-			return nil, err
-		}
-		castaiCloudProxy = append(castaiCloudProxy, __res)
+
+	castaiAutoscalerPolicies, err := castai.NewAutoscaler(ctx, fmt.Sprintf("%s-castai_autoscaler_policies", name), &castai.AutoscalerArgs{
+		AutoscalerSettings: &castai.AutoscalerAutoscalerSettingsArgs{
+			Enabled: pulumi.Bool(true),
+		},
+		ClusterId:              castaiCluster.GkeClusterId,
+		AutoscalerPoliciesJson: args.AutoscalerPoliciesJson,
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAgent,
+		castaiEvictor,
+		castaiClusterController,
+	}))
+	if err != nil {
+		return nil, err
 	}
-	var tmp9 float64
-	if args.InstallSecurityAgent && args.SelfManaged {
-		tmp9 = 1
-	} else {
-		tmp9 = 0
+
+	// NODE TEMPLATE
+	nodeTemplate, err := castai.NewNodeTemplate(ctx, fmt.Sprintf("%s-this", name), &castai.NodeTemplateArgs{
+		CustomTaints:                             &castai.NodeTemplateCustomTaintArray{},
+		Constraints:                              &castai.NodeTemplateConstraintsArgs{},
+		ClusterId:                                castaiCluster.GkeClusterId,
+		Name:                                     pulumi.Sprintf("%$-nodetemplate", name),
+		ConfigurationId:                          nodeConfigurationRes.ConfigurationId,
+		IsDefault:                                pulumi.Bool(true),
+		IsEnabled:                                pulumi.Bool(true),
+		ShouldTaint:                              pulumi.Bool(false),
+		CustomInstancesEnabled:                   pulumi.Bool(false),
+		CustomInstancesWithExtendedMemoryEnabled: pulumi.Bool(false),
+		// CustomLabels:                             pulumi.StringMapInput(pulumi.ToStringMap{}),
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAutoscalerPolicies,
+	}))
+	if err != nil {
+		return nil, err
 	}
-	var castaiKvisorSelfManaged []*helm.Release
-	for index := 0; index < tmp9; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_kvisor_self_managed-%v", name, key0), &helm.ReleaseArgs{
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.clusterID",
-					"value": castaiCluster.Id,
-				},
-				map[string]interface{}{
-					"name":  "castai.grpcAddr",
-					"value": args.ApiGrpcAddr,
-				},
-				map[string]interface{}{
-					"name":  "controller.extraArgs.kube-bench-cloud-provider",
-					"value": "gke",
-				},
-			},
-			Name:            "castai-kvisor",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-kvisor",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Version:         args.KvisorVersion,
-			Values:          args.KvisorValues,
-			SetSensitive: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKey",
-					"value": castaiCluster.ClusterToken,
-				},
-			},
-		}, pulumi.Parent(&componentResource))
-		if err != nil {
-			return nil, err
-		}
-		castaiKvisorSelfManaged = append(castaiKvisorSelfManaged, __res)
-	}
+
+	// var thisWorkloadScalingPolicy []*castai.WorkloadScalingPolicy
+	// for key0, _ := range "TODO: For expression" {
+	// 	__res, err := castai.NewWorkloadScalingPolicy(ctx, fmt.Sprintf("%s-this-%v", name, key0), &castai.WorkloadScalingPolicyArgs{
+	// 		Name:             notImplemented("try(each.value.name,each.key)"),
+	// 		ClusterId:        castaiCluster.Id,
+	// 		ApplyType:        notImplemented("try(each.value.apply_type,\"DEFERRED\")"),
+	// 		ManagementOption: notImplemented("try(each.value.management_option,\"READ_ONLY\")"),
+	// 		Cpu: []map[string]interface{}{
+	// 			map[string]interface{}{
+	// 				"function":       notImplemented("try(each.value.cpu.function,\"QUANTILE\")"),
+	// 				"overhead":       notImplemented("try(each.value.cpu.overhead,0)"),
+	// 				"applyThreshold": notImplemented("try(each.value.cpu.apply_threshold,0.1)"),
+	// 				"args":           notImplemented("try(each.value.cpu.args,[\"0.8\"])"),
+	// 			},
+	// 		},
+	// 		Memory: []map[string]interface{}{
+	// 			map[string]interface{}{
+	// 				"function":       notImplemented("try(each.value.memory.function,\"MAX\")"),
+	// 				"overhead":       notImplemented("try(each.value.memory.overhead,0.1)"),
+	// 				"applyThreshold": notImplemented("try(each.value.memory.apply_threshold,0.1)"),
+	// 			},
+	// 		},
+	// 	}, pulumi.Parent(&componentResource))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	thisWorkloadScalingPolicy = append(thisWorkloadScalingPolicy, __res)
+	// }
+
+	//TODO: Add support for workload autoscaler helmrelease
 	//---------------------------------------------------#
 	// CAST.AI Workload Autoscaler configuration         #
 	//---------------------------------------------------#
-	var tmp10 float64
-	if args.InstallWorkloadAutoscaler && !args.SelfManaged {
-		tmp10 = 1
-	} else {
-		tmp10 = 0
-	}
-	var castaiWorkloadAutoscaler []*helm.Release
-	for index := 0; index < tmp10; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_workload_autoscaler-%v", name, key0), &helm.ReleaseArgs{
-			Name:            "castai-workload-autoscaler",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-workload-autoscaler",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.WorkloadAutoscalerVersion,
-			Values:          args.WorkloadAutoscalerValues,
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKeySecretRef",
-					"value": "castai-cluster-controller",
-				},
-				map[string]interface{}{
-					"name":  "castai.configMapRef",
-					"value": "castai-cluster-controller",
-				},
-			},
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-			castaiClusterController,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiWorkloadAutoscaler = append(castaiWorkloadAutoscaler, __res)
-	}
-	var tmp11 float64
-	if args.InstallWorkloadAutoscaler && args.SelfManaged {
-		tmp11 = 1
-	} else {
-		tmp11 = 0
-	}
-	var castaiWorkloadAutoscalerSelfManaged []*helm.Release
-	for index := 0; index < tmp11; index++ {
-		key0 := index
-		_ := index
-		__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_workload_autoscaler_self_managed-%v", name, key0), &helm.ReleaseArgs{
-			Name:            "castai-workload-autoscaler",
-			Repository:      "https://castai.github.io/helm-charts",
-			Chart:           "castai-workload-autoscaler",
-			Namespace:       "castai-agent",
-			CreateNamespace: true,
-			CleanupOnFail:   true,
-			Wait:            true,
-			Version:         args.WorkloadAutoscalerVersion,
-			Values:          args.WorkloadAutoscalerValues,
-			Set: []map[string]interface{}{
-				map[string]interface{}{
-					"name":  "castai.apiKeySecretRef",
-					"value": "castai-cluster-controller",
-				},
-				map[string]interface{}{
-					"name":  "castai.configMapRef",
-					"value": "castai-cluster-controller",
-				},
-			},
-		}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-			castaiAgent,
-			castaiClusterController,
-		}))
-		if err != nil {
-			return nil, err
-		}
-		castaiWorkloadAutoscalerSelfManaged = append(castaiWorkloadAutoscalerSelfManaged, __res)
-	}
+	// var tmp10 float64
+	// if args.InstallWorkloadAutoscaler && !args.SelfManaged {
+	// 	tmp10 = 1
+	// } else {
+	// 	tmp10 = 0
+	// }
+	// var castaiWorkloadAutoscaler []*helm.Release
+	// for index := 0; index < tmp10; index++ {
+	// 	key0 := index
+	// 	_ := index
+	// 	__res, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_workload_autoscaler-%v", name, key0), &helm.ReleaseArgs{
+	// 		Name:            "castai-workload-autoscaler",
+	// 		Repository:      "https://castai.github.io/helm-charts",
+	// 		Chart:           "castai-workload-autoscaler",
+	// 		Namespace:       "castai-agent",
+	// 		CreateNamespace: true,
+	// 		CleanupOnFail:   true,
+	// 		Wait:            true,
+	// 		Version:         args.WorkloadAutoscalerVersion,
+	// 		Values:          args.WorkloadAutoscalerValues,
+	// 		Set: []map[string]interface{}{
+	// 			map[string]interface{}{
+	// 				"name":  "castai.apiKeySecretRef",
+	// 				"value": "castai-cluster-controller",
+	// 			},
+	// 			map[string]interface{}{
+	// 				"name":  "castai.configMapRef",
+	// 				"value": "castai-cluster-controller",
+	// 			},
+	// 		},
+	// 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+	// 		castaiAgent,
+	// 		castaiClusterController,
+	// 	}))
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// 	castaiWorkloadAutoscaler = append(castaiWorkloadAutoscaler, __res)
+	// }
+
 	err = ctx.RegisterResourceOutputs(&componentResource, pulumi.Map{
-		"clusterId":                castaiCluster.Id,
-		"castaiNodeConfigurations": "TODO: For expression",
-		"castaiNodeTemplates":      "TODO: For expression",
+		"clusterId":                castaiCluster.GkeClusterId,
+		"castaiNodeConfigurations": nodeConfigurationRes,
+		"castaiNodeTemplates":      nodeTemplate,
 	})
 	if err != nil {
 		return nil, err
 	}
-	componentResource.ClusterId = castaiCluster.Id
-	componentResource.CastaiNodeConfigurations = "TODO: For expression"
-	componentResource.CastaiNodeTemplates = "TODO: For expression"
+	componentResource.ClusterId = pulumi.AnyOutput(castaiCluster.GkeClusterId)
+	// componentResource.CastaiNodeConfigurations = nodeConfigurationRes.ConfigurationId
+	// componentResource.CastaiNodeTemplates = "TODO: For expression"
 	return &componentResource, nil
 }
