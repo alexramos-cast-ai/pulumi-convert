@@ -15,6 +15,8 @@ pulumi login --local
 
 pulumi stack init
 
+pulumi config set 'castai:apiToken' <YOUR_CASTAI_API_TOKEN>
+
 pulumi preview
 
 pulumi up

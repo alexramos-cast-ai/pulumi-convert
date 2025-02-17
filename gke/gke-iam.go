@@ -32,8 +32,8 @@ type GkeIamArgs struct {
 type GkeIam struct {
 	pulumi.ResourceState
 	PrivateKey                       pulumi.StringOutput
-	ServiceAccountId                 pulumi.AnyOutput
-	ServiceAccountEmail              pulumi.AnyOutput
+	ServiceAccountId                 pulumi.StringOutput
+	ServiceAccountEmail              pulumi.StringOutput
 	DefaultComputeManagerPermissions pulumi.AnyOutput
 	DefaultCastaiRolePermissions     pulumi.AnyOutput
 }
@@ -131,6 +131,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Beginning GKE IAM")
 
 	// GKE IAM ROLE PREPERATION
 	// Create clustername hash
@@ -167,6 +168,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	}
 
 	// CREATING THE CLUSTER IAM ROLES
+	fmt.Println("Creating IAM ROLE")
 	_, err = projects.NewIAMCustomRole(ctx, fmt.Sprintf("%s-castai_role", name), &projects.IAMCustomRoleArgs{
 		RoleId:      pulumi.String(clusterCustomRoleId),
 		Title:       pulumi.String("Role to manage GKE cluster via CAST AI"),
@@ -244,6 +246,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 		return nil, err
 	}
 
+	fmt.Println("Creating ServiceAccount key")
 	serviceAccountKeyRes, err := serviceaccount.NewKey(ctx, fmt.Sprintf("%s-castai_key", name), &serviceaccount.KeyArgs{
 		ServiceAccountId: pulumi.Sprintf("projects/%s/serviceAccounts/%s", args.ProjectId, serviceAccountRes.AccountId),
 		PublicKeyType:    pulumi.String("TYPE_X509_PEM_FILE"),
@@ -253,7 +256,6 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	if err != nil {
 		return nil, err
 	}
-	serviceAccountKeyRes = serviceAccountKeyRes // TODO: Where to use key generated
 
 	// TODO: Customer provided service account?
 	// var tmp4 map[string]string
@@ -334,6 +336,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	// 	computeManagerBinding = append(computeManagerBinding, __res)
 	// }
 
+	fmt.Println("Binding role")
 	_, err = projects.NewIAMBinding(ctx, fmt.Sprintf("%s-compute_manager_binding", name), &projects.IAMBindingArgs{
 		Project: args.ProjectId,
 		Role:    computeManagerRole.Name,
@@ -346,8 +349,8 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	}
 
 	componentResource.PrivateKey = serviceAccountKeyRes.PrivateKey
-	componentResource.ServiceAccountId = pulumi.AnyOutput(serviceAccountRes.AccountId)
-	componentResource.ServiceAccountEmail = pulumi.AnyOutput(componentResource.ServiceAccountEmail)
+	componentResource.ServiceAccountId = serviceAccountRes.AccountId
+	componentResource.ServiceAccountEmail = serviceAccountRes.Email
 
 	err = ctx.RegisterResourceOutputs(&componentResource, pulumi.Map{
 		"privateKey":          serviceAccountKeyRes.PrivateKey,
