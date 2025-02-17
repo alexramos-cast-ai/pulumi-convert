@@ -12,8 +12,8 @@ func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
 		gkeArgs := gke.GkeIamArgs{
-			ProjectId:      pulumi.String("my-project"),
-			GkeClusterName: pulumi.String("my-cluster"),
+			ProjectId:      pulumi.String("success-team-dev"),
+			GkeClusterName: pulumi.String("gke-021701-acr"),
 			// ServiceAccountsUniqueIds:          pulumi.StringArray{},
 			// ComputeManagerProjectIds:          pulumi.StringArray{},
 			// CreateServiceAccount:              pulumi.Bool(false),
@@ -30,7 +30,7 @@ func main() {
 
 		gkeClusterArgs := castai.GkeClusterArgs{
 			ApiUrl:                    pulumi.String("https://api.cast.ai"),
-			CastaiApiToken:            pulumi.String("my-token"),
+			CastaiApiToken:            pulumi.String("3a9a4ebf136f2abdc3dc4484e117678dd5edf07c4d63b1d3bbb58bd4b5a08625"),
 			GrpcUrl:                   pulumi.String("grpc.cast.ai:443"),
 			ApiGrpcAddr:               pulumi.String("grpc.cast.ai:443"),
 			KvisorControllerExtraArgs: pulumi.StringMap{},
@@ -88,13 +88,15 @@ func main() {
 			Project:  gkeArgs.ProjectId,
 		}, nil)
 
-		_, err = gke.NewGkeIam(ctx, "castai-gke-iam", &gke.GkeIamArgs{
+		gkeIamRes, err := gke.NewGkeIam(ctx, "castai-gke-iam", &gke.GkeIamArgs{
 			ProjectId:      gkeArgs.ProjectId,
 			GkeClusterName: gkeArgs.GkeClusterName,
 		})
 		if err != nil {
 			return err
 		}
+
+		key := gkeIamRes.PrivateKey
 
 		_, err = castai.NewGkeCluster(ctx, "castai-gke-cluster", &castai.GkeClusterArgs{
 			ApiUrl:                    gkeClusterArgs.ApiUrl,
@@ -104,7 +106,7 @@ func main() {
 			ProjectId:                 gkeClusterArgs.ProjectId,
 			GkeClusterName:            gkeClusterArgs.GkeClusterName,
 			GkeClusterLocation:        gkeClusterArgs.GkeClusterLocation,
-			GkeCredentials:            gkeClusterArgs.GkeCredentials,
+			GkeCredentials:            pulumi.StringInput(key),
 			DeleteNodesOnDisconnect:   gkeClusterArgs.DeleteNodesOnDisconnect,
 			InstallWorkloadAutoscaler: gkeClusterArgs.InstallWorkloadAutoscaler,
 			NodeConfigurations: pulumi.Map{

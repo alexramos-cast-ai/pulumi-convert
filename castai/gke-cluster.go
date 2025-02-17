@@ -118,7 +118,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	// 	tmp0 = 1
 	// }
 	evictorValues := pulumi.Map{}
-	castaiEvictor, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor", name), &helm.ReleaseArgs{
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_evictor", name), &helm.ReleaseArgs{
 		Name:            pulumi.String("castai-evictor"),
 		Chart:           pulumi.String("castai-evictor"),
 		Namespace:       pulumi.String("castai-agent"),
@@ -368,52 +368,65 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 
 	// NODE CONFIGURATION
 	// TODO: Support custom node configuration
+
+	var networkTags pulumi.StringArray
+
+	nodeConfig := &castai.NodeConfigurationGkeArgs{
+		// Loadbalancers:               &castai.NodeConfigurationGkeLoadbalancerArgs{},
+		MaxPodsPerNode:              pulumi.Float64(100),
+		NetworkTags:                 networkTags,
+		DiskType:                    pulumi.String("pd-standard"),
+		UseEphemeralStorageLocalSsd: pulumi.Bool(false),
+	}
+	subnets := pulumi.StringArray{
+		pulumi.String("projects/success-team-dev/regions/asia-southeast1/subnetworks/default"),
+	}
+
 	// var this []*castai.NodeConfiguration
 	// for _, value := range args.NodeConfigurations {
-	// 	__res, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
-	// 		Gke: &castai.NodeConfigurationGkePtrInput{
-	// 			"loadbalancers":               "TODO: For expression",
-	// 			"maxPodsPerNode":              notImplemented("try(each.value.max_pods_per_node,110)"),
-	// 			"networkTags":                 notImplemented("try(each.value.network_tags,null)"),
-	// 			"diskType":                    notImplemented("try(each.value.disk_type,null)"),
-	// 			"useEphemeralStorageLocalSsd": notImplemented("try(each.value.use_ephemeral_storage_local_ssd,null)"),
-	// 		},
-	// 		ClusterId:       castaiCluster.Id,
-	// 		Name:            notImplemented("try(each.value.name,each.key)"),
-	// 		DiskCpuRatio:    notImplemented("try(each.value.disk_cpu_ratio,0)"),
-	// 		DrainTimeoutSec: notImplemented("try(each.value.drain_timeout_sec,0)"),
-	// 		MinDiskSize:     notImplemented("try(each.value.min_disk_size,100)"),
-	// 		Subnets:         notImplemented("try(each.value.subnets,null)"),
-	// 		SshPublicKey:    notImplemented("try(each.value.ssh_public_key,null)"),
-	// 		Image:           notImplemented("try(each.value.image,null)"),
-	// 		Tags:            notImplemented("try(each.value.tags,{})"),
-	// 		InitScript:      notImplemented("try(each.value.init_script,null)"),
-	// 	}, pulumi.Parent(&componentResource))
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// 	this = append(this, __res)
+	newNodeConfigurationRes, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
+		Gke:             nodeConfig,
+		ClusterId:       castaiCluster.GkeClusterId,
+		Name:            pulumi.String("default-nodeconfiguration"),
+		DiskCpuRatio:    pulumi.Float64(0),
+		DrainTimeoutSec: pulumi.Float64(100),
+		MinDiskSize:     pulumi.Float64(100),
+		Subnets:         subnets,
+		// SshPublicKey:    pulumi.String("EMPTY_SSH"),
+		// Image:           pulumi.String("EMPTY_IMAGE"),
+		Tags: pulumi.StringMap{
+			"Name": pulumi.String("Test"),
+		},
+		// InitScript: pulumi.String("EMPTY_INIT_SCRIPT"),
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAgent,
+		castaiClusterController,
+	}))
+	if err != nil {
+		return nil, err
+	}
+	// this = append(this, __res)
 	// }
 
 	// Default node configuration
-	nodeConfigurationRes, err := castai.NewNodeConfigurationDefault(ctx, fmt.Sprintf("%s-this", name), &castai.NodeConfigurationDefaultArgs{
-		ClusterId: castaiCluster.GkeClusterId,
-		// ConfigurationId: %!v(PANIC=Format method: fatal: A failure has occurred: unlowered conditional expression @ main.pp:43,21-122),
-	}, pulumi.Parent(&componentResource))
+	_, err = castai.NewNodeConfigurationDefault(ctx, fmt.Sprintf("%s-this", name), &castai.NodeConfigurationDefaultArgs{
+		ClusterId:       castaiCluster.GkeClusterId,
+		ConfigurationId: newNodeConfigurationRes.ID(),
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		newNodeConfigurationRes,
+	}))
 	if err != nil {
 		return nil, err
 	}
 
-	castaiAutoscalerPolicies, err := castai.NewAutoscaler(ctx, fmt.Sprintf("%s-castai_autoscaler_policies", name), &castai.AutoscalerArgs{
+	_, err = castai.NewAutoscaler(ctx, fmt.Sprintf("%s-castai_autoscaler_policies", name), &castai.AutoscalerArgs{
 		AutoscalerSettings: &castai.AutoscalerAutoscalerSettingsArgs{
 			Enabled: pulumi.Bool(true),
 		},
 		ClusterId:              castaiCluster.GkeClusterId,
 		AutoscalerPoliciesJson: args.AutoscalerPoliciesJson,
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
-		castaiEvictor,
-		castaiClusterController,
+		newNodeConfigurationRes,
 	}))
 	if err != nil {
 		return nil, err
@@ -425,7 +438,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Constraints:                              &castai.NodeTemplateConstraintsArgs{},
 		ClusterId:                                castaiCluster.GkeClusterId,
 		Name:                                     pulumi.Sprintf("%$-nodetemplate", name),
-		ConfigurationId:                          nodeConfigurationRes.ConfigurationId,
+		ConfigurationId:                          newNodeConfigurationRes.ID(),
 		IsDefault:                                pulumi.Bool(true),
 		IsEnabled:                                pulumi.Bool(true),
 		ShouldTaint:                              pulumi.Bool(false),
@@ -433,7 +446,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		CustomInstancesWithExtendedMemoryEnabled: pulumi.Bool(false),
 		// CustomLabels:                             pulumi.StringMapInput(pulumi.ToStringMap{}),
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAutoscalerPolicies,
+		newNodeConfigurationRes,
 	}))
 	if err != nil {
 		return nil, err
@@ -514,7 +527,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 
 	err = ctx.RegisterResourceOutputs(&componentResource, pulumi.Map{
 		"clusterId":                castaiCluster.GkeClusterId,
-		"castaiNodeConfigurations": nodeConfigurationRes,
+		"castaiNodeConfigurations": newNodeConfigurationRes,
 		"castaiNodeTemplates":      nodeTemplate,
 	})
 	if err != nil {
