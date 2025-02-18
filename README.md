@@ -16,7 +16,11 @@ pulumi login --local
 pulumi stack init
 
 pulumi config set apiToken <CAST_API_KEY> --secret
+```
 
+Populate the subnet, projectid, clustername and the serviceaccountuniqueid (Default compute engine service account unique id), in the main.go then save.
+
+```
 pulumi preview
 
 pulumi up
