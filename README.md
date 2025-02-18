@@ -1,5 +1,18 @@
 # pulumi-convert
 This is an attempt to use the `pulumi convert --from terraform --language go --out <output_path>`
+
+In this example, we converted the `gke_cluster_existing` which consist of 2 modules 
+```
+module "castai-gke-iam" {
+  source = "castai/gke-iam/castai"
+}
+
+module "castai-gke-cluster" {
+  source = "castai/gke-cluster/castai"
+```
+hence, it produced 2 pulumi component, `gke-iam.go` and `gke-cluster.go`
+
+
 ## Requirements
 
 - pulumi cli
