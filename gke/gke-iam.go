@@ -8,6 +8,7 @@ import (
 
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/projects"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/serviceaccount"
+	"github.com/pulumi/pulumi-std/sdk/go/std"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
@@ -32,8 +33,8 @@ type GkeIamArgs struct {
 type GkeIam struct {
 	pulumi.ResourceState
 	PrivateKey                       pulumi.StringOutput
-	ServiceAccountId                 pulumi.StringOutput
-	ServiceAccountEmail              pulumi.StringOutput
+	ServiceAccountId                 pulumi.AnyOutput
+	ServiceAccountEmail              pulumi.AnyOutput
 	DefaultComputeManagerPermissions pulumi.AnyOutput
 	DefaultCastaiRolePermissions     pulumi.AnyOutput
 }
@@ -169,7 +170,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 
 	// CREATING THE CLUSTER IAM ROLES
 	fmt.Println("Creating IAM ROLE")
-	_, err = projects.NewIAMCustomRole(ctx, fmt.Sprintf("%s-castai_role", name), &projects.IAMCustomRoleArgs{
+	_, err = projects.NewIAMCustomRole(ctx, fmt.Sprintf("%s_castai_role", name), &projects.IAMCustomRoleArgs{
 		RoleId:      pulumi.String(clusterCustomRoleId),
 		Title:       pulumi.String("Role to manage GKE cluster via CAST AI"),
 		Description: pulumi.String("Role to manage GKE cluster via CAST AI"),
@@ -216,7 +217,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	}
 
 	computeRoleId := pulumi.String(fmt.Sprintf("compute.castai.gkeAccess.%v.tf", clusterHashString[:8]))
-	computeManagerRole, err := projects.NewIAMCustomRole(ctx, fmt.Sprintf("%s-compute_manager_role", name), &projects.IAMCustomRoleArgs{
+	computeManagerRole, err := projects.NewIAMCustomRole(ctx, fmt.Sprintf("%s_compute_manager_role", name), &projects.IAMCustomRoleArgs{
 		Project:     args.ProjectId,
 		RoleId:      computeRoleId,
 		Title:       pulumi.String("Role to manage GKE compute resources via CAST AI"),
@@ -231,10 +232,9 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	// ÇREATE SERVICE ACCOUNT
 	serviceAccountHash := sha1.New()
 	serviceAccountHash.Write([]byte(fmt.Sprintf("%s", args.GkeClusterName)))
-	// serviceAccountHashString := hex.EncodeToString(serviceAccountHash.Sum(nil))
+	serviceAccountHashString := hex.EncodeToString(serviceAccountHash.Sum(nil))
 
-	// serviceAccountId := pulumi.String(fmt.Sprintf("castai.gkeAccess.%v.tf", serviceAccountHashString[:8]))
-	serviceAccountId := pulumi.String("achratest")
+	serviceAccountId := pulumi.String(fmt.Sprintf("castai-gke-%v", serviceAccountHashString[:8]))
 	serviceAccountEmail := fmt.Sprintf("%v@%v.iam.gserviceaccount.com", serviceAccountId, args.ProjectId)
 
 	serviceAccountRes, err := serviceaccount.NewAccount(ctx, fmt.Sprintf("%s-castai_service_account", name), &serviceaccount.AccountArgs{
@@ -248,7 +248,8 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 
 	fmt.Println("Creating ServiceAccount key")
 	serviceAccountKeyRes, err := serviceaccount.NewKey(ctx, fmt.Sprintf("%s-castai_key", name), &serviceaccount.KeyArgs{
-		ServiceAccountId: pulumi.Sprintf("projects/%s/serviceAccounts/%s", args.ProjectId, serviceAccountRes.AccountId),
+		// ServiceAccountId: pulumi.Sprintf("projects/%s/serviceAccounts/%s", args.ProjectId, serviceAccountRes.AccountId),
+		ServiceAccountId: serviceAccountRes.Name,
 		PublicKeyType:    pulumi.String("TYPE_X509_PEM_FILE"),
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
 		serviceAccountRes,
@@ -256,6 +257,12 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	if err != nil {
 		return nil, err
 	}
+
+	decoded := std.Base64decodeOutput(ctx, std.Base64decodeOutputArgs{
+		Input: serviceAccountKeyRes.PrivateKey,
+	}, nil).ApplyT(func(invoke std.Base64decodeResult) (string, error) {
+		return invoke.Result, nil
+	}).(pulumi.StringOutput)
 
 	// TODO: Customer provided service account?
 	// var tmp4 map[string]string
@@ -306,12 +313,12 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	// 	_ := index
 	_, err = projects.NewIAMMember(ctx, fmt.Sprintf("%s-scoped_service_account_user", name), &projects.IAMMemberArgs{
 		Project: args.ProjectId,
-		Role:    pulumi.Sprintf("projects/%s/roles/%s", args.ProjectId, clusterCustomRoleId),
+		Role:    pulumi.String("roles/iam.serviceAccountUser"),
 		Member:  pulumi.Sprintf("serviceAccount:%v", serviceAccountEmail),
 		Condition: &projects.IAMMemberConditionArgs{
 			Title:       pulumi.String("iam_condition"),
 			Description: pulumi.String("IAM condition with limited scope"),
-			Expression:  pulumi.String(""),
+			Expression:  pulumi.Sprintf("projects/%s/serviceAccounts/%s", args.ProjectId, serviceAccountRes.AccountId),
 		},
 	}, pulumi.Parent(&componentResource))
 	if err != nil {
@@ -348,12 +355,10 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 		return nil, err
 	}
 
-	componentResource.PrivateKey = serviceAccountKeyRes.PrivateKey
-	componentResource.ServiceAccountId = serviceAccountRes.AccountId
-	componentResource.ServiceAccountEmail = serviceAccountRes.Email
+	componentResource.PrivateKey = decoded
 
 	err = ctx.RegisterResourceOutputs(&componentResource, pulumi.Map{
-		"privateKey":          serviceAccountKeyRes.PrivateKey,
+		"privateKey":          decoded,
 		"serviceAccountId":    serviceAccountRes.AccountId,
 		"serviceAccountEmail": serviceAccountRes.Email,
 	})

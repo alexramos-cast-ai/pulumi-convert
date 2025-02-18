@@ -6,7 +6,9 @@ import (
 	// "github.com/pulumi/pulumi-castai/sdk/go/castai"
 	// "github.com/pulumi/pulumi-helm/sdk/go/helm"
 
+	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
+	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi-terraform-provider/sdks/go/castai/v7/castai"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -84,6 +86,12 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		return nil, err
 	}
 
+	castaiNamespace, err := corev1.NewNamespace(ctx, "castai-agent", &corev1.NamespaceArgs{
+		Metadata: &metav1.ObjectMetaArgs{
+			Name: pulumi.String("castai-agent"),
+		},
+	}, pulumi.Parent(&componentResource))
+
 	// Helm release
 
 	agentValues := pulumi.Map{
@@ -91,7 +99,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		"additionalEnv": pulumi.Map{
 			"STATIC_CLUSTER_ID": castaiCluster.GkeClusterId,
 		},
-		"apiKey": pulumi.StringInput(castaiCluster.ClusterToken),
+		"apiKey": pulumi.StringInput(args.CastaiApiToken),
 	}
 
 	castaiAgent, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_agent", name), &helm.ReleaseArgs{
@@ -105,7 +113,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		RepositoryOpts: &helm.RepositoryOptsArgs{
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
-	}, pulumi.Parent(&componentResource))
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{castaiNamespace}))
 	if err != nil {
 		return nil, err
 	}

@@ -1,22 +1,19 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
-
 	"github.com/castai/pulumi-convert/castai"
 	"github.com/castai/pulumi-convert/gke"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/container"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/organizations"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
+	"gopkg.in/src-d/go-git.v4/plumbing/format/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
-		conf := config.New(ctx, "")
-		apiKey := conf.Get("api_key")
+		conf := config.New()
+		apiKey := conf.Section("castai").Option("apiToken")
 
 		gkeArgs := &gke.GkeIamArgs{
 			ProjectId:      pulumi.String("success-team-dev"),
@@ -55,9 +52,9 @@ func main() {
 			NodeTemplates:                pulumi.StringArray{},
 			WorkloadScalingPolicies:      pulumi.StringArray{},
 			InstallSecurityAgent:         pulumi.Bool(true),
-			AgentVersion:                 pulumi.String(""),
-			ClusterControllerVersion:     pulumi.String(""),
-			EvictorVersion:               pulumi.String(""),
+			AgentVersion:                 pulumi.String("0.97.0"),
+			ClusterControllerVersion:     pulumi.String("0.80.0"),
+			EvictorVersion:               pulumi.String("0.31.42"),
 			EvictorExtVersion:            pulumi.String(""),
 			PodPinnerVersion:             pulumi.String(""),
 			SpotHandlerVersion:           pulumi.String(""),
@@ -69,9 +66,9 @@ func main() {
 			EvictorExtValues:             pulumi.StringArray{},
 			PodPinnerValues:              pulumi.StringArray{},
 			KvisorValues:                 pulumi.StringArray{},
-			SelfManaged:                  pulumi.Bool(false),
-			WaitForClusterReady:          pulumi.Bool(true),
-			InstallWorkloadAutoscaler:    pulumi.Bool(true),
+			SelfManaged:                  pulumi.Bool(true),
+			WaitForClusterReady:          pulumi.Bool(false),
+			InstallWorkloadAutoscaler:    pulumi.Bool(false),
 			WorkloadAutoscalerVersion:    pulumi.String(""),
 			WorkloadAutoscalerValues:     pulumi.StringArray{},
 			InstallCloudProxy:            pulumi.Bool(true),
@@ -103,6 +100,14 @@ func main() {
 			return err
 		}
 
+		// privateKeyEncoded := fmt.Sprintf("%v", gkeIamRes.PrivateKey)
+		// privateKeyDecoded, err := base64.StdEncoding.DecodeString(privateKeyEncoded)
+		// if err != nil {
+		// 	fmt.Errorf("Error decoding base64 credentials")
+		// }
+		// privateKey := fmt.Sprintf("%v", privateKeyDecoded)
+		// fmt.Print(privateKey)
+
 		// key := pulumi.Sprintf("%s", gkeIamRes.PrivateKey)
 		// fmt.Println(key)
 		// accountId := pulumi.Sprintf("%s", gkeIamRes.ServiceAccountId)
@@ -110,25 +115,26 @@ func main() {
 		// accountEmail := pulumi.Sprintf("%s", gkeIamRes.ServiceAccountEmail)
 		// fmt.Println(accountEmail)
 
-		credentialsJson := pulumi.
-			All(gkeIamRes.PrivateKey, gkeIamRes.ServiceAccountId, gkeIamRes.ServiceAccountEmail).
-			ApplyT(func(values []interface{}) string {
-				key := values[0].(string)
-				id := values[1].(string)
-				email := values[2].(string)
+		// credentialsJson := pulumi.
+		// 	All(gkeIamRes.PrivateKey, gkeIamRes.ServiceAccountId, gkeIamRes.ServiceAccountEmail).
+		// 	ApplyT(func(values []interface{}) string {
+		// 		key := values[0].(string)
+		// 		id := values[1].(string)
+		// 		email := values[2].(string)
 
-				credJson := map[string]interface{}{
-					"privateKey":          key,
-					"serviceAccountId":    id,
-					"serviceAccountEmail": email,
-				}
-				buf := bytes.Buffer{}
-				jsonToOutput := json.NewEncoder(&buf)
-				jsonToOutput.Encode(&credJson)
-				jsonToString := buf.String()
+		// 		credJson := map[string]interface{}{
+		// 			"privateKey":          key,
+		// 			"serviceAccountId":    id,
+		// 			"serviceAccountEmail": email,
+		// 			"type":                pulumi.String("TYPE_GOOGLE_CREDENTIALS_FILE"),
+		// 		}
+		// 		buf := bytes.Buffer{}
+		// 		jsonToOutput := json.NewEncoder(&buf)
+		// 		jsonToOutput.Encode(&credJson)
+		// 		jsonToString := buf.String()
 
-				return jsonToString
-			}).(pulumi.StringOutput)
+		// 		return jsonToString
+		// 	}).(pulumi.StringOutput)
 
 		// credentialsJson := pulumi.JSONMarshal(map[string]any{
 		// 	"privateKey":          gkeIamRes.PrivateKey,
@@ -144,9 +150,12 @@ func main() {
 			ProjectId:                 gkeClusterArgs.ProjectId,
 			GkeClusterName:            gkeClusterArgs.GkeClusterName,
 			GkeClusterLocation:        gkeClusterArgs.GkeClusterLocation,
-			GkeCredentials:            credentialsJson,
+			GkeCredentials:            gkeIamRes.PrivateKey,
 			DeleteNodesOnDisconnect:   gkeClusterArgs.DeleteNodesOnDisconnect,
 			InstallWorkloadAutoscaler: gkeClusterArgs.InstallWorkloadAutoscaler,
+			AgentVersion:              gkeClusterArgs.AgentVersion,
+			ClusterControllerVersion:  gkeClusterArgs.ClusterControllerVersion,
+			EvictorVersion:            gkeClusterArgs.EvictorExtVersion,
 			NodeConfigurations: pulumi.Map{
 				"default": pulumi.Map{
 					"minDiskSize":  pulumi.String("100"),
