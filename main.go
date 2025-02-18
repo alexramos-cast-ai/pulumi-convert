@@ -49,7 +49,7 @@ func main() {
 			GkeClusterLocation:        pulumi.String("asia-southeast1-a"),
 			GkeCredentials:            pulumi.String(""),
 			// CastaiComponentsLabels:       pulumi.StringArray{},
-			Subnets:                      pulumi.StringArrayInput(subnets),
+			Subnets:                      subnets,
 			NodeConfigurations:           pulumi.Map{},
 			DefaultNodeConfiguration:     pulumi.String("default"),
 			DefaultNodeConfigurationName: pulumi.String("default"),
@@ -104,48 +104,6 @@ func main() {
 			return err
 		}
 
-		// privateKeyEncoded := fmt.Sprintf("%v", gkeIamRes.PrivateKey)
-		// privateKeyDecoded, err := base64.StdEncoding.DecodeString(privateKeyEncoded)
-		// if err != nil {
-		// 	fmt.Errorf("Error decoding base64 credentials")
-		// }
-		// privateKey := fmt.Sprintf("%v", privateKeyDecoded)
-		// fmt.Print(privateKey)
-
-		// key := pulumi.Sprintf("%s", gkeIamRes.PrivateKey)
-		// fmt.Println(key)
-		// accountId := pulumi.Sprintf("%s", gkeIamRes.ServiceAccountId)
-		// fmt.Println(accountId)
-		// accountEmail := pulumi.Sprintf("%s", gkeIamRes.ServiceAccountEmail)
-		// fmt.Println(accountEmail)
-
-		// credentialsJson := pulumi.
-		// 	All(gkeIamRes.PrivateKey, gkeIamRes.ServiceAccountId, gkeIamRes.ServiceAccountEmail).
-		// 	ApplyT(func(values []interface{}) string {
-		// 		key := values[0].(string)
-		// 		id := values[1].(string)
-		// 		email := values[2].(string)
-
-		// 		credJson := map[string]interface{}{
-		// 			"privateKey":          key,
-		// 			"serviceAccountId":    id,
-		// 			"serviceAccountEmail": email,
-		// 			"type":                pulumi.String("TYPE_GOOGLE_CREDENTIALS_FILE"),
-		// 		}
-		// 		buf := bytes.Buffer{}
-		// 		jsonToOutput := json.NewEncoder(&buf)
-		// 		jsonToOutput.Encode(&credJson)
-		// 		jsonToString := buf.String()
-
-		// 		return jsonToString
-		// 	}).(pulumi.StringOutput)
-
-		// credentialsJson := pulumi.JSONMarshal(map[string]any{
-		// 	"privateKey":          gkeIamRes.PrivateKey,
-		// 	"serviceAccountId":    gkeIamRes.ServiceAccountId,
-		// 	"serviceAccountEmail": gkeIamRes.ServiceAccountEmail,
-		// })
-
 		_, err = castai.NewGkeCluster(ctx, "castai-gke-cluster", &castai.GkeClusterArgs{
 			ApiUrl:                    gkeClusterArgs.ApiUrl,
 			CastaiApiToken:            pulumi.String(apiKey),
@@ -160,6 +118,7 @@ func main() {
 			AgentVersion:              gkeClusterArgs.AgentVersion,
 			ClusterControllerVersion:  gkeClusterArgs.ClusterControllerVersion,
 			EvictorVersion:            gkeClusterArgs.EvictorExtVersion,
+			Subnets:                   gkeClusterArgs.Subnets,
 			NodeConfigurations: pulumi.Map{
 				"default": pulumi.Map{
 					"minDiskSize":  pulumi.String("100"),

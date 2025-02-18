@@ -58,7 +58,7 @@ type GkeClusterArgs struct {
 	CloudProxyVersion            pulumi.StringInput
 	CloudProxyValues             []pulumi.StringInput
 	CloudProxyGrpcUrlOverride    pulumi.StringInput
-	Subnets                      pulumi.StringArrayInput
+	Subnets                      pulumi.StringArray
 }
 
 type GkeCluster struct {
@@ -378,14 +378,14 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 
 	// var this []*castai.NodeConfiguration
 	// for _, value := range args.NodeConfigurations {
-	newNodeConfigurationRes, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
+	newNodeConfigurationRes, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-nodeconfiguration", name), &castai.NodeConfigurationArgs{
 		Gke:             nodeConfig,
 		ClusterId:       castaiCluster.GkeClusterId,
 		Name:            pulumi.String("default"),
 		DiskCpuRatio:    pulumi.Float64(0),
 		DrainTimeoutSec: pulumi.Float64(100),
 		MinDiskSize:     pulumi.Float64(100),
-		Subnets:         args.Subnets,
+		Subnets:         pulumi.StringArrayInput(args.Subnets),
 		// SshPublicKey:    pulumi.String("EMPTY_SSH"),
 		// Image:           pulumi.String("EMPTY_IMAGE"),
 		Tags: pulumi.StringMap{
