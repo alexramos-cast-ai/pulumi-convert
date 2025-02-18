@@ -17,9 +17,9 @@ import (
 // }
 
 type GkeIamArgs struct {
-	ProjectId      pulumi.StringInput
-	GkeClusterName pulumi.StringInput
-	// ServiceAccountsUniqueIds []pulumi.StringInput
+	ProjectId                pulumi.StringInput
+	GkeClusterName           pulumi.StringInput
+	ServiceAccountsUniqueIds pulumi.StringInput
 	// ComputeManagerProjectIds []pulumi.StringInput
 	// CreateServiceAccount              pulumi.Bool
 	// SetupCloudProxyWorkloadIdentity   pulumi.BoolInput
@@ -320,7 +320,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 		Condition: &projects.IAMMemberConditionArgs{
 			Title:       pulumi.String("iam_condition"),
 			Description: pulumi.String("IAM condition with limited scope"),
-			Expression:  pulumi.Sprintf("resource.name.startsWith(\"projects/-/serviceAccounts/%s\")", serviceAccountRes.UniqueId),
+			Expression:  pulumi.Sprintf("resource.name.startsWith(\"projects/-/serviceAccounts/%s\")", args.ServiceAccountsUniqueIds),
 		},
 	}, pulumi.Parent(&componentResource))
 	if err != nil {

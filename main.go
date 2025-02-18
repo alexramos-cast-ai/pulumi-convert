@@ -20,9 +20,9 @@ func main() {
 		}
 
 		gkeArgs := &gke.GkeIamArgs{
-			ProjectId:      pulumi.String("success-team-dev"),
-			GkeClusterName: pulumi.String("gke-021801-acr"),
-			// ServiceAccountsUniqueIds:          pulumi.StringArray{},
+			ProjectId:                pulumi.String("<GOOGLE_PROJECT_ID"),
+			GkeClusterName:           pulumi.String("<CLUSTER_NAME>"),
+			ServiceAccountsUniqueIds: pulumi.String("<DEFAULT_COMPUTE_ENGINE_SERVICEACCOUNT_UNIQUEID>"), // TODO: How to get this dynamically
 			// ComputeManagerProjectIds:          pulumi.StringArray{},
 			// CreateServiceAccount:              pulumi.Bool(false),
 			// SetupCloudProxyWorkloadIdentity:   pulumi.Bool(false),
@@ -60,9 +60,9 @@ func main() {
 			ClusterControllerVersion:     pulumi.String("0.80.0"),
 			EvictorVersion:               pulumi.String("0.31.42"),
 			EvictorExtVersion:            pulumi.String(""),
-			PodPinnerVersion:             pulumi.String(""),
-			SpotHandlerVersion:           pulumi.String(""),
-			KvisorVersion:                pulumi.String(""),
+			PodPinnerVersion:             pulumi.String("1.0.1"),
+			SpotHandlerVersion:           pulumi.String("0.26.0"),
+			KvisorVersion:                pulumi.String("1.0.71"),
 			AgentValues:                  pulumi.StringArray{},
 			SpotHandlerValues:            pulumi.StringArray{},
 			ClusterControllerValues:      pulumi.StringArray{},
@@ -82,13 +82,10 @@ func main() {
 		}
 
 		// Get the GCP client config
-		gkeClientConfig, err := organizations.GetClientConfig(ctx, nil, nil)
+		_, err := organizations.GetClientConfig(ctx, nil, nil)
 		if err != nil {
 			return err
 		}
-		token := gkeClientConfig.AccessToken
-
-		token = token
 
 		_ = container.LookupClusterOutput(ctx, container.LookupClusterOutputArgs{
 			Name:     gkeArgs.GkeClusterName,
@@ -97,8 +94,9 @@ func main() {
 		}, nil)
 
 		gkeIamRes, err := gke.NewGkeIam(ctx, "castai-gke-iam", &gke.GkeIamArgs{
-			ProjectId:      gkeArgs.ProjectId,
-			GkeClusterName: gkeArgs.GkeClusterName,
+			ProjectId:                gkeArgs.ProjectId,
+			GkeClusterName:           gkeArgs.GkeClusterName,
+			ServiceAccountsUniqueIds: gkeArgs.ServiceAccountsUniqueIds,
 		})
 		if err != nil {
 			return err
@@ -119,6 +117,7 @@ func main() {
 			ClusterControllerVersion:  gkeClusterArgs.ClusterControllerVersion,
 			EvictorVersion:            gkeClusterArgs.EvictorExtVersion,
 			Subnets:                   gkeClusterArgs.Subnets,
+			SelfManaged:               gkeClusterArgs.SelfManaged,
 			NodeConfigurations: pulumi.Map{
 				"default": pulumi.Map{
 					"minDiskSize":  pulumi.String("100"),

@@ -86,16 +86,16 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	}
 
 	// Helm release
-
 	agentValues := pulumi.Map{
 		"provider": pulumi.String("gke"),
 		"additionalEnv": pulumi.Map{
 			"STATIC_CLUSTER_ID": castaiCluster.GkeClusterId,
 		},
-		"apiKey": pulumi.StringInput(args.CastaiApiToken),
+		"apiKey":          pulumi.StringInput(args.CastaiApiToken),
+		"createNamespace": pulumi.Bool(false),
 	}
 
-	castaiAgent, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_agent", name), &helm.ReleaseArgs{
+	castAgent, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_agent", name), &helm.ReleaseArgs{
 		Name:            pulumi.String("castai-agent"),
 		Chart:           pulumi.String("castai-agent"),
 		Namespace:       pulumi.String("castai-agent"),
@@ -103,10 +103,36 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.AgentVersion,
 		Values:          agentValues,
+		Timeout:         pulumi.Int(120),
 		RepositoryOpts: &helm.RepositoryOptsArgs{
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
 	}, pulumi.Parent(&componentResource))
+	if err != nil {
+		return nil, err
+	}
+
+	controllerValues := pulumi.Map{
+		"castai": pulumi.Map{
+			"apiKey":    pulumi.StringInput(castaiCluster.ClusterToken),
+			"clusterID": pulumi.StringInput(castaiCluster.GkeClusterId),
+		},
+	}
+
+	_, err = helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller", name), &helm.ReleaseArgs{
+		Name:            pulumi.String("cluster-controller"),
+		Chart:           pulumi.String("castai-cluster-controller"),
+		Namespace:       pulumi.String("castai-agent"),
+		CreateNamespace: pulumi.Bool(false),
+		CleanupOnFail:   pulumi.Bool(true),
+		Version:         args.ClusterControllerVersion,
+		Values:          controllerValues,
+		RepositoryOpts: &helm.RepositoryOptsArgs{
+			Repo: pulumi.String("https://castai.github.io/helm-charts"),
+		},
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castAgent,
+	}))
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +157,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
+		castAgent,
 	}))
 	if err != nil {
 		return nil, err
@@ -164,7 +190,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
+		castAgent,
 	}))
 	if err != nil {
 		return nil, err
@@ -177,30 +203,6 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	// } else {
 	// 	tmp2 = 1
 	// }
-	controllerValues := pulumi.Map{
-		"castai": pulumi.Map{
-			"apiKey":    pulumi.StringInput(castaiCluster.ClusterToken),
-			"clusterID": pulumi.StringInput(castaiCluster.GkeClusterId),
-		},
-	}
-
-	castaiClusterController, err := helm.NewRelease(ctx, fmt.Sprintf("%s-castai_cluster_controller", name), &helm.ReleaseArgs{
-		Name:            pulumi.String("cluster-controller"),
-		Chart:           pulumi.String("castai-cluster-controller"),
-		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(false),
-		CleanupOnFail:   pulumi.Bool(true),
-		Version:         args.ClusterControllerVersion,
-		Values:          controllerValues,
-		RepositoryOpts: &helm.RepositoryOptsArgs{
-			Repo: pulumi.String("https://castai.github.io/helm-charts"),
-		},
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
-	}))
-	if err != nil {
-		return nil, err
-	}
 
 	// TODO: Check this NewCommand which I think only waits for cluster to be ready
 	// 	_, err = local.NewCommand(ctx, fmt.Sprintf("%s-waitForClusterProvisioner0", name), &local.CommandArgs{
@@ -270,7 +272,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
+		castAgent,
 	}))
 	if err != nil {
 		return nil, err
@@ -307,7 +309,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
+		castAgent,
 	}))
 	if err != nil {
 		return nil, err
@@ -392,10 +394,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 			"name": pulumi.String("test"),
 		},
 		// InitScript: pulumi.String("EMPTY_INIT_SCRIPT"),
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
-		castaiAgent,
-		castaiClusterController,
-	}))
+	}, pulumi.Parent(&componentResource))
 	if err != nil {
 		return nil, err
 	}
