@@ -1,7 +1,2 @@
 name: gke_cluster_existing
 runtime: go
-config:
-  castai:apiToken:
-    value: ''
-  castai:apiUrl:
-    value: 'https://api.cast.ai'

@@ -6,14 +6,14 @@ import (
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/container"
 	"github.com/pulumi/pulumi-gcp/sdk/v8/go/gcp/organizations"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-	"gopkg.in/src-d/go-git.v4/plumbing/format/config"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi/config"
 )
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
 
-		conf := config.New()
-		apiKey := conf.Section("castai").Option("apiToken")
+		conf := config.New(ctx, "")
+		apiKey := conf.Require("apiToken")
 
 		gkeArgs := &gke.GkeIamArgs{
 			ProjectId:      pulumi.String("success-team-dev"),
