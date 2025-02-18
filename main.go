@@ -49,7 +49,7 @@ func main() {
 			GkeClusterLocation:        pulumi.String("asia-southeast1-a"),
 			GkeCredentials:            pulumi.String(""),
 			// CastaiComponentsLabels:       pulumi.StringArray{},
-			Subnets:                      subnets,
+			Subnets:                      pulumi.StringArrayInput(subnets),
 			NodeConfigurations:           pulumi.Map{},
 			DefaultNodeConfiguration:     pulumi.String("default"),
 			DefaultNodeConfigurationName: pulumi.String("default"),
