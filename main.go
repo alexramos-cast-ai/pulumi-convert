@@ -14,10 +14,14 @@ func main() {
 
 		conf := config.New(ctx, "")
 		apiKey := conf.Require("apiToken")
+		// TODO: source config via YAML/JSON file perhaps?
+		subnets := pulumi.StringArray{
+			pulumi.String("projects/success-team-dev/regions/asia-southeast1/subnetworks/default"),
+		}
 
 		gkeArgs := &gke.GkeIamArgs{
 			ProjectId:      pulumi.String("success-team-dev"),
-			GkeClusterName: pulumi.String("gke-021701-acr"),
+			GkeClusterName: pulumi.String("gke-021801-acr"),
 			// ServiceAccountsUniqueIds:          pulumi.StringArray{},
 			// ComputeManagerProjectIds:          pulumi.StringArray{},
 			// CreateServiceAccount:              pulumi.Bool(false),
@@ -29,7 +33,6 @@ func main() {
 			ComputeManagerPermissions: pulumi.StringArray{},
 		}
 		clusterRegion := "asia-southeast1"
-		subnets := pulumi.StringArray{}
 		tags := pulumi.StringMap{}
 
 		gkeClusterArgs := &castai.GkeClusterArgs{
@@ -46,6 +49,7 @@ func main() {
 			GkeClusterLocation:        pulumi.String("asia-southeast1-a"),
 			GkeCredentials:            pulumi.String(""),
 			// CastaiComponentsLabels:       pulumi.StringArray{},
+			Subnets:                      subnets,
 			NodeConfigurations:           pulumi.Map{},
 			DefaultNodeConfiguration:     pulumi.String("default"),
 			DefaultNodeConfigurationName: pulumi.String("default"),

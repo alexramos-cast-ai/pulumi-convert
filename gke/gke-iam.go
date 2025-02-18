@@ -292,10 +292,12 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	// var scopedProject []*projects.IAMMember
 	// for key0, _ := range tmp5 {
 
-	_, err = projects.NewIAMMember(ctx, fmt.Sprintf("%s-scoped_project", name), &projects.IAMMemberArgs{
+	_, err = projects.NewIAMBinding(ctx, fmt.Sprintf("%s-scoped_project", name), &projects.IAMBindingArgs{
 		Project: args.ProjectId,
 		Role:    pulumi.Sprintf("projects/%s/roles/%s", args.ProjectId, clusterCustomRoleId),
-		Member:  pulumi.Sprintf("serviceAccount:%v", serviceAccountEmail),
+		Members: pulumi.StringArray{
+			pulumi.Sprintf("serviceAccount:%s", serviceAccountEmail),
+		},
 	}, pulumi.Parent(&componentResource))
 	if err != nil {
 		return nil, err
@@ -318,7 +320,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 		Condition: &projects.IAMMemberConditionArgs{
 			Title:       pulumi.String("iam_condition"),
 			Description: pulumi.String("IAM condition with limited scope"),
-			Expression:  pulumi.Sprintf("projects/%s/serviceAccounts/%s", args.ProjectId, serviceAccountRes.AccountId),
+			Expression:  pulumi.Sprintf("resource.name.startsWith(\"projects/-/serviceAccounts/%s\")", serviceAccountRes.UniqueId),
 		},
 	}, pulumi.Parent(&componentResource))
 	if err != nil {
@@ -343,7 +345,7 @@ func NewGkeIam(ctx *pulumi.Context, name string, args *GkeIamArgs, opts ...pulum
 	// 	computeManagerBinding = append(computeManagerBinding, __res)
 	// }
 
-	fmt.Println("Binding role")
+	// fmt.Println("Binding role")
 	_, err = projects.NewIAMBinding(ctx, fmt.Sprintf("%s-compute_manager_binding", name), &projects.IAMBindingArgs{
 		Project: args.ProjectId,
 		Role:    computeManagerRole.Name,

@@ -6,9 +6,7 @@ import (
 	// "github.com/pulumi/pulumi-castai/sdk/go/castai"
 	// "github.com/pulumi/pulumi-helm/sdk/go/helm"
 
-	corev1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/core/v1"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/helm/v3"
-	metav1 "github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes/meta/v1"
 	"github.com/pulumi/pulumi-terraform-provider/sdks/go/castai/v7/castai"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -60,6 +58,7 @@ type GkeClusterArgs struct {
 	CloudProxyVersion            pulumi.StringInput
 	CloudProxyValues             []pulumi.StringInput
 	CloudProxyGrpcUrlOverride    pulumi.StringInput
+	Subnets                      pulumi.StringArrayInput
 }
 
 type GkeCluster struct {
@@ -86,12 +85,6 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		return nil, err
 	}
 
-	castaiNamespace, err := corev1.NewNamespace(ctx, "castai-agent", &corev1.NamespaceArgs{
-		Metadata: &metav1.ObjectMetaArgs{
-			Name: pulumi.String("castai-agent"),
-		},
-	}, pulumi.Parent(&componentResource))
-
 	// Helm release
 
 	agentValues := pulumi.Map{
@@ -113,7 +106,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		RepositoryOpts: &helm.RepositoryOptsArgs{
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
-	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{castaiNamespace}))
+	}, pulumi.Parent(&componentResource))
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +123,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Name:            pulumi.String("castai-evictor"),
 		Chart:           pulumi.String("castai-evictor"),
 		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
+		CreateNamespace: pulumi.Bool(false),
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.EvictorVersion,
 		Values:          evictorValues,
@@ -163,7 +156,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Name:            pulumi.String("castai-pod-pinner"),
 		Chart:           pulumi.String("castai-pod-pinner"),
 		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
+		CreateNamespace: pulumi.Bool(false),
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.PodPinnerVersion,
 		Values:          podPinnerValues,
@@ -195,7 +188,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Name:            pulumi.String("cluster-controller"),
 		Chart:           pulumi.String("castai-cluster-controller"),
 		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
+		CreateNamespace: pulumi.Bool(false),
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.ClusterControllerVersion,
 		Values:          controllerValues,
@@ -269,7 +262,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Name:            pulumi.String("castai-spot-handler"),
 		Chart:           pulumi.String("castai-spot-handler"),
 		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
+		CreateNamespace: pulumi.Bool(false),
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.SpotHandlerVersion,
 		Values:          spotHandlerValues,
@@ -294,7 +287,7 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 	kvisorValues := pulumi.Map{
 		"castai": pulumi.Map{
 			"clusterID": castaiCluster.GkeClusterId,
-			"apiKey":    pulumi.String(""),
+			"apiKey":    pulumi.StringInput(args.CastaiApiToken),
 		},
 		"controller": pulumi.Map{
 			"extraArgs": pulumi.Map{
@@ -306,20 +299,16 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		Name:            pulumi.String("castai-kvisor"),
 		Chart:           pulumi.String("castai-kvisor"),
 		Namespace:       pulumi.String("castai-agent"),
-		CreateNamespace: pulumi.Bool(true),
+		CreateNamespace: pulumi.Bool(false),
 		CleanupOnFail:   pulumi.Bool(true),
 		Version:         args.KvisorVersion,
 		Values:          kvisorValues,
-		// SetSensitive: []map[string]interface{}{
-		// 	map[string]interface{}{
-		// 		"name":  "castai.apiKey",
-		// 		"value": castaiCluster.ClusterToken,
-		// 	},
-		// },
 		RepositoryOpts: &helm.RepositoryOptsArgs{
 			Repo: pulumi.String("https://castai.github.io/helm-charts"),
 		},
-	}, pulumi.Parent(&componentResource))
+	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
+		castaiAgent,
+	}))
 	if err != nil {
 		return nil, err
 	}
@@ -386,24 +375,21 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		DiskType:                    pulumi.String("pd-standard"),
 		UseEphemeralStorageLocalSsd: pulumi.Bool(false),
 	}
-	subnets := pulumi.StringArray{
-		pulumi.String("projects/success-team-dev/regions/asia-southeast1/subnetworks/default"),
-	}
 
 	// var this []*castai.NodeConfiguration
 	// for _, value := range args.NodeConfigurations {
 	newNodeConfigurationRes, err := castai.NewNodeConfiguration(ctx, fmt.Sprintf("%s-this-", name), &castai.NodeConfigurationArgs{
 		Gke:             nodeConfig,
 		ClusterId:       castaiCluster.GkeClusterId,
-		Name:            pulumi.String("default-nodeconfiguration"),
+		Name:            pulumi.String("default"),
 		DiskCpuRatio:    pulumi.Float64(0),
 		DrainTimeoutSec: pulumi.Float64(100),
 		MinDiskSize:     pulumi.Float64(100),
-		Subnets:         subnets,
+		Subnets:         args.Subnets,
 		// SshPublicKey:    pulumi.String("EMPTY_SSH"),
 		// Image:           pulumi.String("EMPTY_IMAGE"),
 		Tags: pulumi.StringMap{
-			"Name": pulumi.String("Test"),
+			"name": pulumi.String("test"),
 		},
 		// InitScript: pulumi.String("EMPTY_INIT_SCRIPT"),
 	}, pulumi.Parent(&componentResource), pulumi.DependsOn([]pulumi.Resource{
@@ -445,9 +431,9 @@ func NewGkeCluster(ctx *pulumi.Context, name string, args *GkeClusterArgs, opts 
 		CustomTaints:                             &castai.NodeTemplateCustomTaintArray{},
 		Constraints:                              &castai.NodeTemplateConstraintsArgs{},
 		ClusterId:                                castaiCluster.GkeClusterId,
-		Name:                                     pulumi.Sprintf("%$-nodetemplate", name),
+		Name:                                     pulumi.Sprintf("%s_nodetemplate", name),
 		ConfigurationId:                          newNodeConfigurationRes.ID(),
-		IsDefault:                                pulumi.Bool(true),
+		IsDefault:                                pulumi.Bool(false),
 		IsEnabled:                                pulumi.Bool(true),
 		ShouldTaint:                              pulumi.Bool(false),
 		CustomInstancesEnabled:                   pulumi.Bool(false),
